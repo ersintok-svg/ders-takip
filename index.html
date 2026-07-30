@@ -164,7 +164,7 @@ function changeType(dk,idx,sel){
   rows[idx].type=sel.value;
   rows[idx].rate=getDefaultRate(sel.value);
   saveDayRows(dk,rows);
-  if(rows[idx].done){var amt=calcHours(rows[idx].time||'')*rows[idx].rate;updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
+  if(rows[idx].done){var h=calcHours(rows[idx].time||'')||1;var amt=h*rows[idx].rate;updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
 }
 function addRow(dk){
   var rows=getDayData(dk);rows.push({name:'',time:'',done:false,type:'bireysel',rate:getDefaultRate('bireysel')});
@@ -188,8 +188,8 @@ function toggleRow(dk,idx,cb){
   var key=dk+'-'+idx;
   if(cb.checked){
     var name=rows[idx].name||'İsimsiz',time=rows[idx].time||'',t=rows[idx].type||'bireysel',rate=rows[idx].rate>0?rows[idx].rate:getDefaultRate(t);
-    var hours=calcHours(time),amt=(hours*rate);
-    if(amt>0)addPayment(key,name,dk,time,amt);
+    var hours=calcHours(time)||1,amt=hours*rate;
+    addPayment(key,name,dk,time,amt);
   }else{removePayment(key)}
   saveDayRows(dk,rows);
 }
@@ -208,7 +208,7 @@ function attachRowEvents(){
           rows[idx].time=row.querySelector('.row-time').value;
           rows[idx].type=row.querySelector('.row-type').value;
           saveDayRows(dk,rows);
-          if(rows[idx].done){var t=rows[idx].type||'bireysel',r=rows[idx].rate>0?rows[idx].rate:getDefaultRate(t);var amt=calcHours(rows[idx].time||'')*r;if(amt>0)updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
+          if(rows[idx].done){var t=rows[idx].type||'bireysel',r=rows[idx].rate>0?rows[idx].rate:getDefaultRate(t);var amt=calcHours(rows[idx].time||'')*r;if(rows[idx].done)updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt>0?amt:r)}
         });
     });
   });
