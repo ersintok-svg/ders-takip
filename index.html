@@ -255,6 +255,7 @@ function addPayment(key,name,dayKey,time,amount){
   savePayments(p);
 }
 function removePayment(key){var p=getPayments();delete p[key];savePayments(p)}
+function deletePayment(key){removePayment(key);renderPayments()}
 function updatePaymentAmount(key,name,time,amount){
   var p=getPayments();
   if(p[key]){p[key].name=name;p[key].time=time;p[key].amount=amount;if(!p[key].date)p[key].date=getDateFromDayKey(p[key].dayKey)}
@@ -282,13 +283,13 @@ function renderPayments(){
   names.forEach(function(n){
     var g=groups[n],bal=g.total-g.paid;
     html+='<div class="student-card"><h3><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input class="student-select" type="checkbox" data-name="'+esc(n)+'" checked style="width:18px;height:18px;accent-color:var(--primary)"> '+esc(n)+'</label></h3><div class="summary">Toplam: '+g.total.toFixed(0)+' TL</div>';
-    html+='<table><thead><tr><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th></tr></thead><tbody>';
+    html+='<table><thead><tr><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th><th></th></tr></thead><tbody>';
     g.lessons.forEach(function(l){
       var fd=formatDate(l.date),dd='';
       if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
-      html+='<tr><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar">'+l.amount.toFixed(0)+' TL</td></tr>';
+      html+='<tr><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar">'+l.amount.toFixed(0)+' TL</td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
     });
-    html+='<tr class="toplam"><td colspan="3"><strong>Toplam</strong></td><td class="tutar"><strong>'+g.total.toFixed(0)+' TL</strong></td></tr>';
+    html+='<tr class="toplam"><td colspan="4"><strong>Toplam</strong></td><td class="tutar"><strong>'+g.total.toFixed(0)+' TL</strong></td></tr>';
     html+='</tbody></table></div>';
   });
   el.innerHTML=html;
