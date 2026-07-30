@@ -109,7 +109,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 
 <script>
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
-function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 var weekOffset=0;
 
 /* ---------- TAB ---------- */
@@ -186,9 +186,9 @@ function toggleRow(dk,idx,cb){
   var re=cb.closest('.cal-row');if(re)re.classList.toggle('done',cb.checked);
   var key=dk+'-'+idx;
   if(cb.checked){
-    var name=rows[idx].name||'İsimsiz',time=rows[idx].time||'',t=rows[idx].type||'bireysel',rate=rows[idx].rate||getDefaultRate(t);
-    var hours=calcHours(time),amt=hours*rate;
-    addPayment(key,name,dk,time,amt);
+    var name=rows[idx].name||'İsimsiz',time=rows[idx].time||'',t=rows[idx].type||'bireysel',rate=rows[idx].rate>0?rows[idx].rate:getDefaultRate(t);
+    var hours=calcHours(time),amt=(hours*rate);
+    if(amt>0)addPayment(key,name,dk,time,amt);
   }else{removePayment(key)}
   saveDayRows(dk,rows);
 }
@@ -207,7 +207,7 @@ function attachRowEvents(){
           rows[idx].time=row.querySelector('.row-time').value;
           rows[idx].type=row.querySelector('.row-type').value;
           saveDayRows(dk,rows);
-          if(rows[idx].done){var t=rows[idx].type||'bireysel',r=parseFloat(rows[idx].rate)||getDefaultRate(t);var amt=calcHours(rows[idx].time)*r;updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
+          if(rows[idx].done){var t=rows[idx].type||'bireysel',r=rows[idx].rate>0?rows[idx].rate:getDefaultRate(t);var amt=calcHours(rows[idx].time||'')*r;if(amt>0)updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
         });
     });
   });
@@ -232,14 +232,14 @@ function copyWeekForward(){
 function getDayKey(w,d){return'wk'+w+'d'+d}
 function getDayData(k){try{var a=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}');return a[k]||[]}catch(e){return[]}}
 function saveDayRows(k,r){try{var a=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}');a[k]=r;localStorage.setItem('dersTakipProgram',JSON.stringify(a))}catch(e){}}
-function getDefaultRate(type){return parseFloat(localStorage.getItem('dersDefaultRate'+(type==='grup'?'Grup':'Bireysel')))||(type==='grup'?300:500)}
+function getDefaultRate(type){var v=parseFloat(localStorage.getItem('dersDefaultRate'+(type==='grup'?'Grup':'Bireysel')));return v>0?v:(type==='grup'?300:500)}
 
 function calcHours(t){
-  if(!t)return 1;
-  var p=t.replace(/\./g,':').split('-');if(p.length<2)return 1;
+  if(!t)return 0;
+  var p=t.replace(/\./g,':').split('-');if(p.length<2)return 0;
   var s=p[0].trim().split(':').map(Number),e=p[1].trim().split(':').map(Number);
-  if(s.length<2||e.length<2||isNaN(s[0])||isNaN(e[0]))return 1;
-  var h=(e[0]*60+(e[1]||0)-s[0]*60-(s[1]||0))/60;return h>0?h:1;
+  if(s.length<2||e.length<2||isNaN(s[0])||isNaN(e[0]))return 0;
+  var h=(e[0]*60+(e[1]||0)-s[0]*60-(s[1]||0))/60;return h>0?+h.toFixed(2):0;
 }
 
 /* ---------- PAYMENTS ---------- */
