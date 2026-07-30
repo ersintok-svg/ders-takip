@@ -152,12 +152,12 @@ function renderRow(dk,idx,row){
   var sel='<select class="row-type" onchange="changeType(\''+dk+'\','+idx+',this)" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
     '<option value="bireysel"'+(t==='bireysel'?' selected':'')+'>B</option>'+
     '<option value="grup"'+(t==='grup'?' selected':'')+'>G</option></select>';
-  return '<div class="cal-row'+cls+'" data-idx="'+idx+'">'+
-    '<input type="checkbox" '+ch+' onchange="toggleRow(\''+dk+'\','+idx+',this)">'+
+  return '<div class="cal-row'+cls+'" data-key="'+dk+'" data-idx="'+idx+'">'+
+    '<input type="checkbox" '+ch+' class="row-check">'+
     sel+
-    '<input class="row-name" value="'+esc(row.name||'')+'" placeholder="Öğrenci adı" oninput="updateRow(\''+dk+'\','+idx+')">'+
-    '<input class="row-time" value="'+esc(row.time||'')+'" placeholder="17.00-19.00" oninput="updateRow(\''+dk+'\','+idx+')">'+
-    '<input class="row-rate" value="'+rt+'" placeholder="TL" oninput="updateRow(\''+dk+'\','+idx+')" title="Saat ücreti" style="width:60px">'+
+    '<input class="row-name" value="'+esc(row.name||'')+'" placeholder="Öğrenci adı">'+
+    '<input class="row-time" value="'+esc(row.time||'')+'" placeholder="17.00-19.00">'+
+    '<input class="row-rate" value="'+rt+'" placeholder="TL" title="Saat ücreti" style="width:60px">'+
     '<button class="delete-row" onclick="deleteRow(\''+dk+'\','+idx+')" title="Sil">x</button></div>';
 }
 
@@ -197,22 +197,25 @@ function toggleRow(dk,idx,cb){
   saveDayRows(dk,rows);
 }
 
-function updateRow(dk,idx){
-  var rows=getDayData(dk),c=document.getElementById('boxes-'+dk);
-  if(!c)return;
-  var els=c.querySelectorAll('.cal-row');
-  if(els[idx]){
-    var name=els[idx].querySelector('.row-name').value,time=els[idx].querySelector('.row-time').value;
-    var rate=parseFloat(els[idx].querySelector('.row-rate').value)||0,t=els[idx].querySelector('.row-type').value;
-    if(rows[idx]){rows[idx].name=name;rows[idx].time=time;rows[idx].rate=rate;rows[idx].type=t}
-    else rows[idx]={name:name,time:time,rate:rate,type:t,done:false};
-    saveDayRows(dk,rows);
-    if(rows[idx].done){
-      var amt=calcHours(time)*rate;
-      updatePaymentAmount(dk+'-'+idx,name,time,amt);
-    }
+/* ---------- EVENT DELEGATION ---------- */
+document.addEventListener('change',function(e){
+  var cb=e.target.closest('.row-check');if(cb){toggleRow(cb.closest('.cal-row').dataset.key,parseInt(cb.closest('.cal-row').dataset.idx),cb);return}
+  var sel=e.target.closest('.row-type');if(sel){changeType(sel.closest('.cal-row').dataset.key,parseInt(sel.closest('.cal-row').dataset.idx),sel)}
+});
+document.addEventListener('input',function(e){
+  var row=e.target.closest('.cal-row');if(!row)return;
+  var dk=row.dataset.key,idx=parseInt(row.dataset.idx),rows=getDayData(dk);
+  if(!rows[idx])return;
+  rows[idx].name=row.querySelector('.row-name').value;
+  rows[idx].time=row.querySelector('.row-time').value;
+  rows[idx].rate=parseFloat(row.querySelector('.row-rate').value)||0;
+  rows[idx].type=row.querySelector('.row-type').value;
+  saveDayRows(dk,rows);
+  if(rows[idx].done){
+    var amt=calcHours(rows[idx].time)*rows[idx].rate;
+    updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt);
   }
-}
+});
 
 /* ---------- COPY WEEK ---------- */
 function copyWeekForward(){
