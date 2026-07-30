@@ -45,9 +45,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 .cal-row .row-name:focus{background:#f0f0ff;border-radius:4px}
 .cal-row .row-time{width:110px;border:none;outline:none;font-size:.8rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--muted);text-align:right;flex-shrink:0}
 .cal-row .row-time:focus{background:#f0f0ff;border-radius:4px}
-.cal-row .row-rate{width:60px;border:none;outline:none;font-size:.75rem;padding:4px 4px;background:transparent;font-family:inherit;color:#059669;text-align:right;flex-shrink:0}
-.cal-row .row-rate:focus{background:#f0f0ff;border-radius:4px}
-.cal-row.done .row-name,.cal-row.done .row-time,.cal-row.done .row-rate{text-decoration:line-through;color:#bbb}
+.cal-row.done .row-name,.cal-row.done .row-time{text-decoration:line-through;color:#bbb}
 .cal-add{display:block;width:100%;padding:8px;border:1px dashed var(--border);border-radius:6px;background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;text-align:center;transition:.2s}
 .cal-add:hover{background:var(--bg);color:var(--primary);border-color:var(--primary)}
 .delete-row{width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1;flex-shrink:0;opacity:0;transition:.2s}
@@ -67,7 +65,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 .empty-state{padding:60px 20px;text-align:center;color:var(--muted)}
 .empty-state p{margin-bottom:12px;font-size:1rem}
 @media print{body{background:#fff;padding:0}.tabs,.toolbar,.cal-add,.delete-row{display:none!important}.panel{display:block!important}.container{max-width:100%}.student-card{break-inside:avoid;box-shadow:none;border:1px solid #ddd;border-radius:4px}}
-@media(max-width:600px){body{padding:8px}.cal-row{flex-wrap:wrap;gap:3px;padding:6px 0}.cal-row .row-name{flex:1;min-width:80px;font-size:.9rem;padding:4px 2px}.cal-row .row-time{flex:1;min-width:80px;font-size:.85rem;padding:4px 2px}.cal-row .row-rate{width:60px;font-size:.8rem;padding:4px 2px}.cal-row .row-type{font-size:.8rem!important;padding:2px 6px!important}.cal-boxes{padding:4px 6px}.cal-add{font-size:.75rem;padding:6px}.cal-day-header{padding:8px 10px;font-size:.85rem}.student-card table{font-size:.8rem}.student-card th,.student-card td{padding:6px}}
+@media(max-width:600px){body{padding:8px}.cal-row{flex-wrap:wrap;gap:3px;padding:6px 0}.cal-row .row-name{flex:1;min-width:80px;font-size:.9rem;padding:4px 2px}.cal-row .row-time{flex:1;min-width:80px;font-size:.85rem;padding:4px 2px}.cal-row .row-type{font-size:.8rem!important;padding:2px 6px!important}.cal-boxes{padding:4px 6px}.cal-add{font-size:.75rem;padding:6px}.cal-day-header{padding:8px 10px;font-size:.85rem}.student-card table{font-size:.8rem}.student-card th,.student-card td{padding:6px}}
 </style>
 </head>
 <body>
@@ -158,7 +156,6 @@ function renderRow(dk,idx,row){
     sel+
     '<input class="row-name" value="'+esc(row.name||'')+'" placeholder="Öğrenci adı">'+
     '<input class="row-time" value="'+esc(row.time||'')+'" placeholder="17.00-19.00">'+
-    '<input class="row-rate" value="'+rt+'" placeholder="TL" title="Saat ücreti" style="width:60px">'+
     '<button class="delete-row" onclick="deleteRow(\''+dk+'\','+idx+')" title="Sil">x</button></div>';
 }
 
@@ -167,8 +164,6 @@ function changeType(dk,idx,sel){
   rows[idx].type=sel.value;
   rows[idx].rate=getDefaultRate(sel.value);
   saveDayRows(dk,rows);
-  var c=document.getElementById('boxes-'+dk);
-  if(c){var els=c.querySelectorAll('.cal-row');if(els[idx])els[idx].querySelector('.row-rate').value=rows[idx].rate}
   if(rows[idx].done){var amt=calcHours(rows[idx].time||'')*rows[idx].rate;updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
 }
 function addRow(dk){
@@ -191,7 +186,7 @@ function toggleRow(dk,idx,cb){
   var re=cb.closest('.cal-row');if(re)re.classList.toggle('done',cb.checked);
   var key=dk+'-'+idx;
   if(cb.checked){
-    var name=rows[idx].name||'İsimsiz',time=rows[idx].time||'',t=rows[idx].type||'bireysel',rate=parseFloat(rows[idx].rate)||getDefaultRate(t);
+    var name=rows[idx].name||'İsimsiz',time=rows[idx].time||'',t=rows[idx].type||'bireysel',rate=rows[idx].rate||getDefaultRate(t);
     var hours=calcHours(time),amt=hours*rate;
     addPayment(key,name,dk,time,amt);
   }else{removePayment(key)}
@@ -205,16 +200,15 @@ function attachRowEvents(){
     var dk=row.dataset.key,idx=parseInt(row.dataset.idx);
     row.querySelector('.row-check').addEventListener('change',function(){toggleRow(dk,idx,this)});
     row.querySelector('.row-type').addEventListener('change',function(){changeType(dk,idx,this)});
-    row.querySelectorAll('.row-name,.row-time,.row-rate').forEach(function(inp){
-      inp.addEventListener('input',function(){
-        var rows=getDayData(dk);if(!rows[idx])return;
-        rows[idx].name=row.querySelector('.row-name').value;
-        rows[idx].time=row.querySelector('.row-time').value;
-        rows[idx].rate=parseFloat(row.querySelector('.row-rate').value)||0;
-        rows[idx].type=row.querySelector('.row-type').value;
-        saveDayRows(dk,rows);
-        if(rows[idx].done){var amt=calcHours(rows[idx].time)*rows[idx].rate;updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
-      });
+      row.querySelectorAll('.row-name,.row-time').forEach(function(inp){
+        inp.addEventListener('input',function(){
+          var rows=getDayData(dk);if(!rows[idx])return;
+          rows[idx].name=row.querySelector('.row-name').value;
+          rows[idx].time=row.querySelector('.row-time').value;
+          rows[idx].type=row.querySelector('.row-type').value;
+          saveDayRows(dk,rows);
+          if(rows[idx].done){var t=rows[idx].type||'bireysel',r=parseFloat(rows[idx].rate)||getDefaultRate(t);var amt=calcHours(rows[idx].time)*r;updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
+        });
     });
   });
 }
