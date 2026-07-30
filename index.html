@@ -142,76 +142,63 @@ function renderSchedule(){
     html+='</div><button class="cal-add" onclick="addRow(\''+dk+'\')">+ Ekle</button></div>';
   });
   document.getElementById('cal-grid').innerHTML=html;
-  attachRowEvents();
 }
 
 function renderRow(dk,idx,row){
   var ch=row.done?'checked':'',cls=row.done?' done':'',t=row.type||'bireysel';
-  var rt=row.rate!==undefined?row.rate:getDefaultRate(t);
-  var sel='<select class="row-type" onchange="changeType(\''+dk+'\','+idx+',this)" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
-    '<option value="bireysel"'+(t==='bireysel'?' selected':'')+'>B</option>'+
-    '<option value="grup"'+(t==='grup'?' selected':'')+'>G</option></select>';
   return '<div class="cal-row'+cls+'" data-key="'+dk+'" data-idx="'+idx+'">'+
-    '<input type="checkbox" '+ch+' class="row-check">'+
-    sel+
-    '<input class="row-name" value="'+esc(row.name||'')+'" placeholder="Öğrenci adı">'+
-    '<input class="row-time" value="'+esc(row.time||'')+'" placeholder="17.00-19.00">'+
-    '<button class="delete-row" onclick="deleteRow(\''+dk+'\','+idx+')" title="Sil">x</button></div>';
+    '<input type="checkbox" '+ch+' onchange="toggleRow(this)">'+
+    '<select onchange="changeType(this)" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
+    '<option value="bireysel"'+(t==='bireysel'?' selected':'')+'>B</option>'+
+    '<option value="grup"'+(t==='grup'?' selected':'')+'>G</option></select>'+
+    '<input class="row-name" value="'+esc(row.name||'')+'" placeholder="Öğrenci adı" oninput="saveRow(this)">'+
+    '<input class="row-time" value="'+esc(row.time||'')+'" placeholder="17.00-19.00" oninput="saveRow(this)">'+
+    '<button onclick="deleteRow(this)" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1;flex-shrink:0">x</button></div>';
 }
 
-function changeType(dk,idx,sel){
-  var rows=getDayData(dk);if(!rows[idx])return;
-  rows[idx].type=sel.value;
-  rows[idx].rate=getDefaultRate(sel.value);
-  saveDayRows(dk,rows);
-  if(rows[idx].done){var h=calcHours(rows[idx].time||'')||1;var amt=h*rows[idx].rate;updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
+function getRow(el){var r=el.closest('.cal-row');return r?{key:r.dataset.key,idx:parseInt(r.dataset.idx),row:r}:null}
+function changeType(el){
+  var g=getRow(el);if(!g)return;
+  var rows=getDayData(g.key);if(!rows[g.idx])return;
+  rows[g.idx].type=el.value;
+  rows[g.idx].rate=getDefaultRate(el.value);
+  saveDayRows(g.key,rows);
+  if(rows[g.idx].done){var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*rows[g.idx].rate)}
 }
 function addRow(dk){
   var rows=getDayData(dk);rows.push({name:'',time:'',done:false,type:'bireysel',rate:getDefaultRate('bireysel')});
   saveDayRows(dk,rows);
   var c=document.getElementById('boxes-'+dk);
   c.insertAdjacentHTML('beforeend',renderRow(dk,rows.length-1,{name:'',time:'',done:false,type:'bireysel',rate:getDefaultRate('bireysel')}));
-  attachRowEvents();
   var inp=c.querySelectorAll('.row-name');if(inp.length)inp[inp.length-1].focus();
 }
-
-function deleteRow(dk,idx){
-  var rows=getDayData(dk);
-  if(rows[idx]&&rows[idx].done) removePayment(dk+'-'+idx);
-  rows.splice(idx,1);saveDayRows(dk,rows);renderSchedule();
+function deleteRow(el){
+  var g=getRow(el);if(!g)return;
+  var rows=getDayData(g.key);
+  if(rows[g.idx]&&rows[g.idx].done) removePayment(g.key+'-'+g.idx);
+  rows.splice(g.idx,1);saveDayRows(g.key,rows);renderSchedule();
 }
-
-function toggleRow(dk,idx,cb){
-  var rows=getDayData(dk);if(!rows[idx])return;
-  rows[idx].done=cb.checked;
-  var re=cb.closest('.cal-row');if(re)re.classList.toggle('done',cb.checked);
-  var key=dk+'-'+idx;
+function toggleRow(cb){
+  var g=getRow(cb);if(!g)return;
+  var rows=getDayData(g.key);if(!rows[g.idx])return;
+  rows[g.idx].done=cb.checked;
+  g.row.classList.toggle('done',cb.checked);
+  var key=g.key+'-'+g.idx;
   if(cb.checked){
-    var name=rows[idx].name||'İsimsiz',time=rows[idx].time||'',t=rows[idx].type||'bireysel',rate=rows[idx].rate>0?rows[idx].rate:getDefaultRate(t);
+    var r=rows[g.idx],name=r.name||'İsimsiz',time=r.time||'',t=r.type||'bireysel',rate=r.rate>0?r.rate:getDefaultRate(t);
     var hours=calcHours(time)||1,amt=hours*rate;
-    addPayment(key,name,dk,time,amt);
+    addPayment(key,name,g.key,time,amt);
   }else{removePayment(key)}
-  saveDayRows(dk,rows);
+  saveDayRows(g.key,rows);
 }
-
-/* ---------- ATTACH EVENTS ---------- */
-function attachRowEvents(){
-  document.querySelectorAll('.cal-row').forEach(function(row){
-    if(row._attached)return;row._attached=true;
-    var dk=row.dataset.key,idx=parseInt(row.dataset.idx);
-    row.querySelector('.row-check').addEventListener('change',function(){toggleRow(dk,idx,this)});
-    row.querySelector('.row-type').addEventListener('change',function(){changeType(dk,idx,this)});
-      row.querySelectorAll('.row-name,.row-time').forEach(function(inp){
-        inp.addEventListener('input',function(){
-          var rows=getDayData(dk);if(!rows[idx])return;
-          rows[idx].name=row.querySelector('.row-name').value;
-          rows[idx].time=row.querySelector('.row-time').value;
-          rows[idx].type=row.querySelector('.row-type').value;
-          saveDayRows(dk,rows);
-          if(rows[idx].done){var t=rows[idx].type||'bireysel',r=rows[idx].rate>0?rows[idx].rate:getDefaultRate(t);var amt=calcHours(rows[idx].time||'')*r;if(rows[idx].done)updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt>0?amt:r)}
-        });
-    });
-  });
+function saveRow(el){
+  var g=getRow(el);if(!g)return;
+  var rows=getDayData(g.key);if(!rows[g.idx])return;
+  rows[g.idx].name=g.row.querySelector('.row-name').value;
+  rows[g.idx].time=g.row.querySelector('.row-time').value;
+  var sel=g.row.querySelector('select');if(sel)rows[g.idx].type=sel.value;
+  saveDayRows(g.key,rows);
+  if(rows[g.idx].done){var r=rows[g.idx].rate>0?rows[g.idx].rate:getDefaultRate(rows[g.idx].type||'bireysel');var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*r)}
 }
 
 /* ---------- COPY WEEK ---------- */
