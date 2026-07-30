@@ -101,6 +101,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
   <div class="toolbar">
     <button class="btn btn-primary btn-sm" onclick="printSelected()">&#x1F5A8; Seçili Öğrencileri PDF Gönder</button>
     <button class="btn btn-outline btn-sm" onclick="document.querySelectorAll('.student-select').forEach(function(c){c.checked=true});renderPayments()">Tümünü Seç</button>
+    <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;color:var(--muted)">Ay: <input id="month-filter" type="month" onchange="paymentMonth=this.value;renderPayments()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.85rem;outline:none;background:transparent;color:var(--text)"></label>
     <button class="btn btn-outline btn-sm" onclick="renderPayments()">&#x21BB; Yenile</button>
   </div>
   <div id="payments-content"></div>
@@ -111,6 +112,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 var weekOffset=0;
+var paymentMonth='';
 
 /* ---------- TAB ---------- */
 document.querySelectorAll('.tab').forEach(function(t){
@@ -271,6 +273,8 @@ function togglePaid(key,cb){
 function renderPayments(){
   var p=getPayments(),keys=Object.keys(p),el=document.getElementById('payments-content');
   if(!keys.length){el.innerHTML='<div class="empty-state"><p>Henüz işlenmiş ders yok.</p><p style="font-size:.85rem">Ders Programı\'nda checkbox işaretleyince buraya eklenir.</p></div>';return}
+  if(paymentMonth) keys=keys.filter(function(k){return p[k].date&&p[k].date.slice(0,7)===paymentMonth});
+  if(!keys.length){el.innerHTML='<div class="empty-state"><p>Bu aya ait ders bulunamadı.</p></div>';return}
   var groups={};
   keys.forEach(function(k){
     var e=p[k];if(!groups[e.name])groups[e.name]={lessons:[],total:0,paid:0};
@@ -336,6 +340,9 @@ function printPayments(selectedNames){
 }
 
 /* ---------- INIT ---------- */
+var now=new Date();
+paymentMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+document.getElementById('month-filter').value=paymentMonth;
 document.getElementById('default-rate-bireysel').value=getDefaultRate('bireysel');
 document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
