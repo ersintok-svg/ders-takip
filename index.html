@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Özel Ders Takip</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ders Takip">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f4f6f9;--card:#fff;--primary:#4f46e5;--primary-hover:#4338ca;--text:#1e293b;--muted:#64748b;--border:#e2e8f0;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);padding:16px}
+.container{max-width:960px;margin:0 auto}
+h1{font-size:1.5rem;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:20px}
+h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--card);border-radius:var(--radius);padding:4px;box-shadow:var(--shadow)}
+.tab{padding:10px 20px;border:none;background:transparent;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:500;color:var(--muted);transition:.2s}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--primary);color:#fff}
+.panel{display:none}
+.panel.active{display:block}
+.toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.btn{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:.875rem;font-weight:500;transition:.2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{background:var(--bg)}
+.btn-sm{padding:4px 10px;font-size:.8rem}
+.calendar-wrap{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;padding:16px}
+.cal-grid{display:flex;flex-direction:column;gap:8px}
+.cal-day{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.cal-day.today{border-color:var(--primary);border-width:2px}
+.cal-day-header{padding:10px 14px;font-weight:600;font-size:.9rem;background:#f8fafc;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.cal-day.today .cal-day-header{background:var(--primary);color:#fff}
+.cal-day-header .cal-date{font-size:.8rem;font-weight:400;color:var(--muted)}
+.cal-day.today .cal-day-header .cal-date{color:rgba(255,255,255,.8)}
+.cal-boxes{padding:6px 10px}
+.cal-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:.85rem}
+.cal-row:last-child{border-bottom:none}
+.cal-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--primary)}
+.cal-row .row-name{flex:1;border:none;outline:none;font-size:.85rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--text);min-width:0}
+.cal-row .row-name:focus{background:#f0f0ff;border-radius:4px}
+.cal-row .row-time{width:110px;border:none;outline:none;font-size:.8rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--muted);text-align:right;flex-shrink:0}
+.cal-row .row-time:focus{background:#f0f0ff;border-radius:4px}
+.cal-row .row-rate{width:60px;border:none;outline:none;font-size:.75rem;padding:4px 4px;background:transparent;font-family:inherit;color:#059669;text-align:right;flex-shrink:0}
+.cal-row .row-rate:focus{background:#f0f0ff;border-radius:4px}
+.cal-row.done .row-name,.cal-row.done .row-time,.cal-row.done .row-rate{text-decoration:line-through;color:#bbb}
+.cal-add{display:block;width:100%;padding:8px;border:1px dashed var(--border);border-radius:6px;background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;text-align:center;transition:.2s}
+.cal-add:hover{background:var(--bg);color:var(--primary);border-color:var(--primary)}
+.delete-row{width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1;flex-shrink:0;opacity:0;transition:.2s}
+.cal-row:hover .delete-row{opacity:1}
+.delete-row:hover{color:var(--danger)}
+.student-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+.student-card h3{font-size:1rem;margin-bottom:4px}
+.student-card .summary{font-size:.85rem;color:var(--muted);margin-bottom:10px}
+.student-card table{width:100%;border-collapse:collapse;font-size:.85rem}
+.student-card th,.student-card td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.student-card th{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.student-card .paid-badge{color:#059669;font-weight:600}
+.student-card .unpaid-badge{color:#dc2626;font-weight:600}
+.student-card .tutar{text-align:right;font-weight:600;white-space:nowrap}
+.student-card .toplam{background:#f8fafc;font-weight:700}
+.student-card .toplam td{border-bottom:none;padding-top:10px}
+.empty-state{padding:60px 20px;text-align:center;color:var(--muted)}
+.empty-state p{margin-bottom:12px;font-size:1rem}
+@media print{body{background:#fff;padding:0}.tabs,.toolbar,.cal-add,.delete-row{display:none!important}.panel{display:block!important}.container{max-width:100%}.student-card{break-inside:avoid;box-shadow:none;border:1px solid #ddd;border-radius:4px}}
+@media(max-width:600px){.student-card table{font-size:.8rem}.student-card th,.student-card td{padding:6px}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>&#x1F393; Özel Ders Takip <small>program &amp; ödeme</small></h1>
+
+<div class="tabs">
+  <button class="tab active" data-tab="program">&#x1F4C5; Ders Programı</button>
+  <button class="tab" data-tab="odemeler">&#x1F4B0; Ödemeler</button>
+</div>
+
+<div id="program" class="panel active">
+  <div class="toolbar">
+    <button class="btn btn-outline btn-sm" onclick="weekOffset--;renderSchedule()">&larr;</button>
+    <span id="week-label" style="font-weight:600;min-width:240px;text-align:center;display:inline-block"></span>
+    <button class="btn btn-outline btn-sm" onclick="copyWeekForward();weekOffset++;renderSchedule()">&rarr;</button>
+    <button class="btn btn-outline btn-sm" onclick="weekOffset=0;renderSchedule()">Bu Hafta</button>
+  </div>
+  <div class="toolbar" style="margin-top:8px">
+    <span style="font-size:.8rem;color:var(--muted)">Bireysel:</span>
+    <input id="default-rate-bireysel" type="number" value="500" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem('dersDefaultRateBireysel',this.value)">
+    <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
+    <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Grup:</span>
+    <input id="default-rate-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem('dersDefaultRateGrup',this.value)">
+    <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
+  </div>
+  <div class="calendar-wrap">
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+</div>
+
+<div id="odemeler" class="panel">
+  <div class="toolbar">
+    <button class="btn btn-primary btn-sm" onclick="printSelected()">&#x1F5A8; Seçili Öğrencileri PDF Gönder</button>
+    <button class="btn btn-outline btn-sm" onclick="document.querySelectorAll('.student-select').forEach(function(c){c.checked=true});renderPayments()">Tümünü Seç</button>
+    <button class="btn btn-outline btn-sm" onclick="renderPayments()">&#x21BB; Yenile</button>
+  </div>
+  <div id="payments-content"></div>
+</div>
+</div>
+
+<script>
+const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+var weekOffset=0;
+
+/* ---------- TAB ---------- */
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click',function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
+    document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('active')});
+    this.classList.add('active');
+    document.getElementById(this.dataset.tab).classList.add('active');
+    if(this.dataset.tab==='odemeler') renderPayments();
+  });
+});
+
+/* ---------- PROGRAM ---------- */
+function renderSchedule(){
+  var now=new Date(),start=new Date(now);
+  start.setDate(start.getDate()+weekOffset*7-start.getDay()+1);
+  var days=[];
+  for(var i=0;i<7;i++){var d=new Date(start);d.setDate(start.getDate()+i);days.push(d)}
+  var isCW=(weekOffset===0),ti=-1;
+  if(isCW) ti=now.getDay()===0?6:now.getDay()-1;
+  var ms=days[0].toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
+  if(days[0].getMonth()!==days[6].getMonth()) ms=days[0].toLocaleDateString('tr-TR',{month:'long'})+' - '+days[6].toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
+  document.getElementById('week-label').textContent=ms+' | '+days[0].getDate()+' - '+days[6].getDate();
+  var html='';
+  days.forEach(function(d,idx){
+    var di=d.getDay()===0?6:d.getDay()-1,isT=isCW&&idx===ti,dk=getDayKey(weekOffset,idx),rows=getDayData(dk);
+    html+='<div class="cal-day'+(isT?' today':'')+'"><div class="cal-day-header">'+DAYS[di]+'<span class="cal-date">'+d.getDate()+'</span></div><div class="cal-boxes" id="boxes-'+dk+'">';
+    rows.forEach(function(r,ri){html+=renderRow(dk,ri,r)});
+    html+='</div><button class="cal-add" onclick="addRow(\''+dk+'\')">+ Ekle</button></div>';
+  });
+  document.getElementById('cal-grid').innerHTML=html;
+}
+
+function renderRow(dk,idx,row){
+  var ch=row.done?'checked':'',cls=row.done?' done':'',t=row.type||'bireysel';
+  var rt=row.rate!==undefined?row.rate:getDefaultRate(t);
+  var sel='<select class="row-type" onchange="changeType(\''+dk+'\','+idx+',this)" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
+    '<option value="bireysel"'+(t==='bireysel'?' selected':'')+'>B</option>'+
+    '<option value="grup"'+(t==='grup'?' selected':'')+'>G</option></select>';
+  return '<div class="cal-row'+cls+'" data-idx="'+idx+'">'+
+    '<input type="checkbox" '+ch+' onchange="toggleRow(\''+dk+'\','+idx+',this)">'+
+    sel+
+    '<input class="row-name" value="'+esc(row.name||'')+'" placeholder="Öğrenci adı" oninput="updateRow(\''+dk+'\','+idx+')">'+
+    '<input class="row-time" value="'+esc(row.time||'')+'" placeholder="17.00-19.00" oninput="updateRow(\''+dk+'\','+idx+')">'+
+    '<input class="row-rate" value="'+rt+'" placeholder="TL" oninput="updateRow(\''+dk+'\','+idx+')" title="Saat ücreti" style="width:60px">'+
+    '<button class="delete-row" onclick="deleteRow(\''+dk+'\','+idx+')" title="Sil">x</button></div>';
+}
+
+function changeType(dk,idx,sel){
+  var rows=getDayData(dk);if(!rows[idx])return;
+  rows[idx].type=sel.value;
+  rows[idx].rate=getDefaultRate(sel.value);
+  saveDayRows(dk,rows);
+  var c=document.getElementById('boxes-'+dk);
+  if(c){var els=c.querySelectorAll('.cal-row');if(els[idx])els[idx].querySelector('.row-rate').value=rows[idx].rate}
+  if(rows[idx].done){var amt=calcHours(rows[idx].time||'')*rows[idx].rate;updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
+}
+function addRow(dk){
+  var rows=getDayData(dk);rows.push({name:'',time:'',done:false,type:'bireysel',rate:getDefaultRate('bireysel')});
+  saveDayRows(dk,rows);
+  var c=document.getElementById('boxes-'+dk);
+  c.insertAdjacentHTML('beforeend',renderRow(dk,rows.length-1,{name:'',time:'',done:false,type:'bireysel',rate:getDefaultRate('bireysel')}));
+  var inp=c.querySelectorAll('.row-name');if(inp.length)inp[inp.length-1].focus();
+}
+
+function deleteRow(dk,idx){
+  var rows=getDayData(dk);
+  if(rows[idx]&&rows[idx].done) removePayment(dk+'-'+idx);
+  rows.splice(idx,1);saveDayRows(dk,rows);renderSchedule();
+}
+
+function toggleRow(dk,idx,cb){
+  var rows=getDayData(dk);if(!rows[idx])return;
+  rows[idx].done=cb.checked;
+  var re=cb.closest('.cal-row');if(re)re.classList.toggle('done',cb.checked);
+  var key=dk+'-'+idx;
+  if(cb.checked){
+    var name=rows[idx].name||'İsimsiz',time=rows[idx].time||'',t=rows[idx].type||'bireysel',rate=parseFloat(rows[idx].rate)||getDefaultRate(t);
+    var hours=calcHours(time),amt=hours*rate;
+    addPayment(key,name,dk,time,amt);
+  }else{removePayment(key)}
+  saveDayRows(dk,rows);
+}
+
+function updateRow(dk,idx){
+  var rows=getDayData(dk),c=document.getElementById('boxes-'+dk);
+  if(!c)return;
+  var els=c.querySelectorAll('.cal-row');
+  if(els[idx]){
+    var name=els[idx].querySelector('.row-name').value,time=els[idx].querySelector('.row-time').value;
+    var rate=parseFloat(els[idx].querySelector('.row-rate').value)||0,t=els[idx].querySelector('.row-type').value;
+    if(rows[idx]){rows[idx].name=name;rows[idx].time=time;rows[idx].rate=rate;rows[idx].type=t}
+    else rows[idx]={name:name,time:time,rate:rate,type:t,done:false};
+    saveDayRows(dk,rows);
+    if(rows[idx].done){
+      var amt=calcHours(time)*rate;
+      updatePaymentAmount(dk+'-'+idx,name,time,amt);
+    }
+  }
+}
+
+/* ---------- COPY WEEK ---------- */
+function copyWeekForward(){
+  var data;
+  try{data=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}')}catch(e){return}
+  for(var i=0;i<7;i++){
+    var srcKey=getDayKey(weekOffset,i),dstKey=getDayKey(weekOffset+1,i);
+    var srcRows=data[srcKey];
+    if(srcRows&&srcRows.length){
+      var copy=srcRows.map(function(r){return{name:r.name,time:r.time,rate:r.rate,type:r.type||'bireysel',done:false}});
+      data[dstKey]=copy;
+    }
+  }
+  localStorage.setItem('dersTakipProgram',JSON.stringify(data));
+}
+
+/* ---------- DATA ---------- */
+function getDayKey(w,d){return'wk'+w+'d'+d}
+function getDayData(k){try{var a=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}');return a[k]||[]}catch(e){return[]}}
+function saveDayRows(k,r){try{var a=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}');a[k]=r;localStorage.setItem('dersTakipProgram',JSON.stringify(a))}catch(e){}}
+function getDefaultRate(type){return parseFloat(localStorage.getItem('dersDefaultRate'+(type==='grup'?'Grup':'Bireysel')))||(type==='grup'?300:500)}
+
+function calcHours(t){
+  if(!t)return 1;
+  var p=t.replace(/\./g,':').split('-');if(p.length<2)return 1;
+  var s=p[0].trim().split(':').map(Number),e=p[1].trim().split(':').map(Number);
+  if(s.length<2||e.length<2||isNaN(s[0])||isNaN(e[0]))return 1;
+  var h=(e[0]*60+(e[1]||0)-s[0]*60-(s[1]||0))/60;return h>0?h:1;
+}
+
+/* ---------- PAYMENTS ---------- */
+function getPayments(){try{return JSON.parse(localStorage.getItem('dersTakipOdeme')||'{}')}catch(e){return{}}}
+function savePayments(p){localStorage.setItem('dersTakipOdeme',JSON.stringify(p))}
+
+function getDateFromDayKey(dayKey){
+  var m=dayKey.match(/wk(-?\d+)d(\d)/);if(!m)return'';
+  var w=parseInt(m[1]),d=parseInt(m[2]),now=new Date(),start=new Date(now);
+  start.setDate(start.getDate()+w*7-start.getDay()+1+d);
+  var y=start.getFullYear(),mo=String(start.getMonth()+1).padStart(2,'0'),da=String(start.getDate()).padStart(2,'0');
+  return y+'-'+mo+'-'+da;
+}
+function formatDate(iso){
+  if(!iso)return'';
+  var p=iso.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]);
+  var days=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+  return days[d.getDay()]+' '+d.getDate()+' '+['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'][d.getMonth()]+' '+d.getFullYear();
+}
+function addPayment(key,name,dayKey,time,amount){
+  var p=getPayments();
+  p[key]={name:name,dayKey:dayKey,time:time,amount:amount,paid:false,date:getDateFromDayKey(dayKey)};
+  savePayments(p);
+}
+function removePayment(key){var p=getPayments();delete p[key];savePayments(p)}
+function updatePaymentAmount(key,name,time,amount){
+  var p=getPayments();
+  if(p[key]){p[key].name=name;p[key].time=time;p[key].amount=amount;if(!p[key].date)p[key].date=getDateFromDayKey(p[key].dayKey)}
+  savePayments(p);
+}
+function togglePaid(key,cb){
+  var p=getPayments();
+  if(p[key])p[key].paid=cb.checked;
+  savePayments(p);renderPayments();
+}
+
+/* ---------- RENDER PAYMENTS TAB ---------- */
+function renderPayments(){
+  var p=getPayments(),keys=Object.keys(p),el=document.getElementById('payments-content');
+  if(!keys.length){el.innerHTML='<div class="empty-state"><p>Henüz işlenmiş ders yok.</p><p style="font-size:.85rem">Ders Programı\'nda checkbox işaretleyince buraya eklenir.</p></div>';return}
+  var groups={};
+  keys.forEach(function(k){
+    var e=p[k];if(!groups[e.name])groups[e.name]={lessons:[],total:0,paid:0};
+    groups[e.name].lessons.push({key:k,dayKey:e.dayKey,time:e.time,amount:e.amount,paid:e.paid,date:e.date});
+    groups[e.name].total+=e.amount;
+    if(e.paid)groups[e.name].paid+=e.amount;
+  });
+  var names=Object.keys(groups).sort();
+  var html='';
+  names.forEach(function(n){
+    var g=groups[n],bal=g.total-g.paid;
+    html+='<div class="student-card"><h3><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input class="student-select" type="checkbox" data-name="'+esc(n)+'" checked style="width:18px;height:18px;accent-color:var(--primary)"> '+esc(n)+'</label></h3><div class="summary">Toplam: '+g.total.toFixed(0)+' TL</div>';
+    html+='<table><thead><tr><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th></tr></thead><tbody>';
+    g.lessons.forEach(function(l){
+      var fd=formatDate(l.date),dd='';
+      if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
+      html+='<tr><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar">'+l.amount.toFixed(0)+' TL</td></tr>';
+    });
+    html+='<tr class="toplam"><td colspan="3"><strong>Toplam</strong></td><td class="tutar"><strong>'+g.total.toFixed(0)+' TL</strong></td></tr>';
+    html+='</tbody></table></div>';
+  });
+  el.innerHTML=html;
+}
+
+/* ---------- PRINT / PDF ---------- */
+function printSelected(){
+  var cbs=document.querySelectorAll('.student-select:checked');
+  if(!cbs.length){alert('Lütfen en az bir öğrenci seçin.');return}
+  var names=[];
+  cbs.forEach(function(cb){names.push(cb.dataset.name)});
+  printPayments(names);
+}
+function printPayments(selectedNames){
+  var p=getPayments(),keys=Object.keys(p);
+  if(!keys.length){alert('Yazdırılacak ödeme kaydı yok.');return}
+  var groups={};
+  keys.forEach(function(k){
+    var e=p[k];if(!groups[e.name])groups[e.name]={lessons:[],total:0,paid:0};
+    groups[e.name].lessons.push({dayKey:e.dayKey,time:e.time,amount:e.amount,paid:e.paid,date:e.date});
+    groups[e.name].total+=e.amount;
+    if(e.paid)groups[e.name].paid+=e.amount;
+  });
+  var names=selectedNames||Object.keys(groups).sort(),allHtml='';
+  names.forEach(function(n){
+    if(!groups[n])return;
+    var g=groups[n],bal=g.total-g.paid;
+    allHtml+='<div style="page-break-inside:avoid;margin-bottom:30px;padding:20px;border:1px solid #ddd;border-radius:8px">';
+    allHtml+='<h2 style="margin-bottom:4px">'+esc(n)+'</h2>';
+    allHtml+='<p style="margin-bottom:12px;color:#666;font-size:.9rem">Toplam: '+g.total.toFixed(0)+' TL</p>';
+    allHtml+='<table style="width:100%;border-collapse:collapse;font-size:.9rem"><thead><tr style="background:#f5f5f5"><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Tarih</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Gün</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Saat</th><th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ddd">Tutar</th></tr></thead><tbody>';
+    g.lessons.forEach(function(l){
+      var fd=formatDate(l.date),dd='';
+      if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
+      allHtml+='<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(fd||'')+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(dd)+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(l.time||'-')+'</td><td style="padding:6px 10px;text-align:right;border-bottom:1px solid #eee">'+l.amount.toFixed(0)+' TL</td></tr>';
+    });
+    allHtml+='<tr style="font-weight:700"><td colspan="3" style="padding:8px 10px;border-top:2px solid #000">Toplam</td><td style="padding:8px 10px;text-align:right;border-top:2px solid #000">'+g.total.toFixed(0)+' TL</td></tr>';
+    allHtml+='</tbody></table></div>';
+  });
+  var win=window.open('','_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ödeme Dökümü</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px;color:#1e293b}@media print{body{padding:0}}h1{font-size:1.3rem;margin-bottom:20px}</style></head><body><h1>&#x1F393; Özel Ders Ödeme Dökümü</h1><p style="color:#666;margin-bottom:20px">Dönem: '+new Date().toLocaleDateString('tr-TR',{month:'long',year:'numeric'})+'</p>'+allHtml+'</body></html>');
+  win.document.close();
+  setTimeout(function(){win.print()},500);
+}
+
+/* ---------- INIT ---------- */
+document.getElementById('default-rate-bireysel').value=getDefaultRate('bireysel');
+document.getElementById('default-rate-grup').value=getDefaultRate('grup');
+renderSchedule();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
