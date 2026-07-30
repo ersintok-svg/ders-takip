@@ -144,6 +144,7 @@ function renderSchedule(){
     html+='</div><button class="cal-add" onclick="addRow(\''+dk+'\')">+ Ekle</button></div>';
   });
   document.getElementById('cal-grid').innerHTML=html;
+  attachRowEvents();
 }
 
 function renderRow(dk,idx,row){
@@ -197,25 +198,26 @@ function toggleRow(dk,idx,cb){
   saveDayRows(dk,rows);
 }
 
-/* ---------- EVENT DELEGATION ---------- */
-document.addEventListener('change',function(e){
-  var cb=e.target.closest('.row-check');if(cb){toggleRow(cb.closest('.cal-row').dataset.key,parseInt(cb.closest('.cal-row').dataset.idx),cb);return}
-  var sel=e.target.closest('.row-type');if(sel){changeType(sel.closest('.cal-row').dataset.key,parseInt(sel.closest('.cal-row').dataset.idx),sel)}
-});
-document.addEventListener('input',function(e){
-  var row=e.target.closest('.cal-row');if(!row)return;
-  var dk=row.dataset.key,idx=parseInt(row.dataset.idx),rows=getDayData(dk);
-  if(!rows[idx])return;
-  rows[idx].name=row.querySelector('.row-name').value;
-  rows[idx].time=row.querySelector('.row-time').value;
-  rows[idx].rate=parseFloat(row.querySelector('.row-rate').value)||0;
-  rows[idx].type=row.querySelector('.row-type').value;
-  saveDayRows(dk,rows);
-  if(rows[idx].done){
-    var amt=calcHours(rows[idx].time)*rows[idx].rate;
-    updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt);
-  }
-});
+/* ---------- ATTACH EVENTS ---------- */
+function attachRowEvents(){
+  document.querySelectorAll('.cal-row').forEach(function(row){
+    if(row._attached)return;row._attached=true;
+    var dk=row.dataset.key,idx=parseInt(row.dataset.idx);
+    row.querySelector('.row-check').addEventListener('change',function(){toggleRow(dk,idx,this)});
+    row.querySelector('.row-type').addEventListener('change',function(){changeType(dk,idx,this)});
+    row.querySelectorAll('.row-name,.row-time,.row-rate').forEach(function(inp){
+      inp.addEventListener('input',function(){
+        var rows=getDayData(dk);if(!rows[idx])return;
+        rows[idx].name=row.querySelector('.row-name').value;
+        rows[idx].time=row.querySelector('.row-time').value;
+        rows[idx].rate=parseFloat(row.querySelector('.row-rate').value)||0;
+        rows[idx].type=row.querySelector('.row-type').value;
+        saveDayRows(dk,rows);
+        if(rows[idx].done){var amt=calcHours(rows[idx].time)*rows[idx].rate;updatePaymentAmount(dk+'-'+idx,rows[idx].name,rows[idx].time,amt)}
+      });
+    });
+  });
+}
 
 /* ---------- COPY WEEK ---------- */
 function copyWeekForward(){
