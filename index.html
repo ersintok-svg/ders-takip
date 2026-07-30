@@ -171,6 +171,7 @@ function addRow(dk){
   saveDayRows(dk,rows);
   var c=document.getElementById('boxes-'+dk);
   c.insertAdjacentHTML('beforeend',renderRow(dk,rows.length-1,{name:'',time:'',done:false,type:'bireysel',rate:getDefaultRate('bireysel')}));
+  attachRowEvents();
   var inp=c.querySelectorAll('.row-name');if(inp.length)inp[inp.length-1].focus();
 }
 
