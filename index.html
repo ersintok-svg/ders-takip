@@ -156,7 +156,7 @@ function renderRow(dk,idx,row){
     '<button onclick="deleteRow(this)" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1;flex-shrink:0">x</button></div>';
 }
 
-function getRow(el){var r=el.closest('.cal-row');return r?{key:r.dataset.key,idx:parseInt(r.dataset.idx),row:r}:null}
+function getRow(el){var r=el.parentElement;while(r&&!r.dataset.key)r=r.parentElement;return r?{key:r.dataset.key,idx:parseInt(r.dataset.idx),row:r}:null}
 function changeType(el){
   var g=getRow(el);if(!g)return;
   var rows=getDayData(g.key);if(!rows[g.idx])return;
@@ -179,17 +179,19 @@ function deleteRow(el){
   rows.splice(g.idx,1);saveDayRows(g.key,rows);renderSchedule();
 }
 function toggleRow(cb){
-  var g=getRow(cb);if(!g)return;
-  var rows=getDayData(g.key);if(!rows[g.idx])return;
-  rows[g.idx].done=cb.checked;
-  g.row.classList.toggle('done',cb.checked);
-  var key=g.key+'-'+g.idx;
-  if(cb.checked){
-    var r=rows[g.idx],name=r.name||'İsimsiz',time=r.time||'',t=r.type||'bireysel',rate=r.rate>0?r.rate:getDefaultRate(t);
-    var hours=calcHours(time)||1,amt=hours*rate;
-    addPayment(key,name,g.key,time,amt);
-  }else{removePayment(key)}
-  saveDayRows(g.key,rows);
+  try{
+    var g=getRow(cb);if(!g)return;
+    var rows=getDayData(g.key);if(!rows[g.idx])return;
+    rows[g.idx].done=cb.checked;
+    g.row.classList.toggle('done',cb.checked);
+    var key=g.key+'-'+g.idx;
+    if(cb.checked){
+      var r=rows[g.idx],name=r.name||'İsimsiz',time=r.time||'',t=r.type||'bireysel',rate=r.rate>0?r.rate:getDefaultRate(t);
+      var hours=calcHours(time)||1,amt=hours*rate;
+      addPayment(key,name,g.key,time,amt);
+    }else{removePayment(key)}
+    saveDayRows(g.key,rows);
+  }catch(e){alert('Hata: '+e.message)}
 }
 function saveRow(el){
   var g=getRow(el);if(!g)return;
