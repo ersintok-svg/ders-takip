@@ -121,7 +121,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-07-31-15';
+var APP_VERSION='2026-07-31-16';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -468,6 +468,11 @@ function checkBackup(){
 }
 
 /* ---------- INIT ---------- */
+function applyTheme(){
+  var themes={'ben':{'--primary':'#3b82f6','--primary-hover':'#2563eb','--bg':'#eff6ff'},'esim':{'--primary':'#14b8a6','--primary-hover':'#0d9488','--bg':'#f0fdfa'}};
+  var th=themes[profile]||themes.ben;
+  for(var k in th)document.documentElement.style.setProperty(k,th[k]);
+}
 function renderProfileBar(){
   var el=document.getElementById('profile-bar');
   var profs={'ben':{label:'E',color:'#60a5fa'},'esim':{label:'M',color:'#14b8a6'}};
@@ -486,6 +491,7 @@ try{
   if(!localStorage.getItem('dersDefaultRateBireysel_ben')&&localStorage.getItem('dersDefaultRateBireysel'))localStorage.setItem('dersDefaultRateBireysel_ben',localStorage.getItem('dersDefaultRateBireysel'));
   if(!localStorage.getItem('dersDefaultRateGrup_ben')&&localStorage.getItem('dersDefaultRateGrup'))localStorage.setItem('dersDefaultRateGrup_ben',localStorage.getItem('dersDefaultRateGrup'));
 }catch(e){}
+applyTheme();
 renderProfileBar();
 paymentMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
 document.getElementById('month-filter').value=paymentMonth;
@@ -494,7 +500,7 @@ document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=17',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=18',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
