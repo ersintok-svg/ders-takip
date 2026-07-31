@@ -116,7 +116,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 </div>
 
 <script>
-var APP_VERSION='2026-07-31-9';
+var APP_VERSION='2026-07-31-10';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -278,6 +278,13 @@ function togglePaid(key,cb){
   if(p[key])p[key].paid=cb.checked;
   savePayments(p);renderPayments();
 }
+function updateAmount(key,el){
+  var v=parseFloat(el.value);
+  if(isNaN(v)||v<0)v=0;
+  var p=getPayments();
+  if(p[key]){p[key].amount=v;savePayments(p)}
+  renderPayments();
+}
 
 /* ---------- RENDER PAYMENTS TAB ---------- */
 function renderPayments(){
@@ -301,7 +308,7 @@ function renderPayments(){
     g.lessons.forEach(function(l){
       var fd=formatDate(l.date),dd='';
       if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
-      html+='<tr><td><input type="checkbox" onchange="togglePaid(\''+esc(l.key)+'\',this)"'+(l.paid?' checked':'')+' style="width:18px;height:18px;accent-color:var(--primary)"></td><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar">'+l.amount.toFixed(0)+' TL</td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
+      html+='<tr><td><input type="checkbox" onchange="togglePaid(\''+esc(l.key)+'\',this)"'+(l.paid?' checked':'')+' style="width:18px;height:18px;accent-color:var(--primary)"></td><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar"><input type="number" value="'+l.amount.toFixed(0)+'" min="0" onchange="updateAmount(\''+esc(l.key)+'\',this)" style="width:72px;text-align:right;font-size:.85rem;font-weight:600;border:1px solid transparent;border-radius:6px;padding:2px 4px;outline:none;background:transparent;color:var(--text)" onfocus="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"><span style="font-size:.8rem">TL</span></td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
     });
     html+='<tr class="toplam"><td colspan="5"><strong>Kalan</strong></td><td class="tutar"><strong>'+bal.toFixed(0)+' TL</strong></td></tr>';
     html+='</tbody></table></div>';
@@ -415,7 +422,7 @@ document.getElementById('month-filter').value=paymentMonth;
 document.getElementById('default-rate-bireysel').value=getDefaultRate('bireysel');
 document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=11',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=12',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
