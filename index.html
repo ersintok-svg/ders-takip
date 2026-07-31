@@ -121,7 +121,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-07-31-14';
+var APP_VERSION='2026-07-31-15';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -470,13 +470,13 @@ function checkBackup(){
 /* ---------- INIT ---------- */
 function renderProfileBar(){
   var el=document.getElementById('profile-bar');
-  var names={'ben':'Ben','esim':'Eşim'};
+  var profs={'ben':{label:'E',color:'#60a5fa'},'esim':{label:'M',color:'#14b8a6'}};
   var html='<span style="font-size:.85rem;color:var(--muted)">Profil:</span>';
-  Object.keys(names).forEach(function(p){
-    var active=p===profile;
-    html+='<button onclick="setProfile(\''+p+'\')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:.85rem;font-weight:600;background:'+(active?'var(--primary)':'#fff')+';color:'+(active?'#fff':'var(--text)')+'">'+names[p]+'</button>';
+  Object.keys(profs).forEach(function(p){
+    var active=p===profile,pr=profs[p];
+    html+='<button onclick="setProfile(\''+p+'\')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:.85rem;font-weight:700;background:'+(active?pr.color:'#fff')+';color:'+(active?'#fff':'var(--text)')+'">'+pr.label+'</button>';
   });
-  html+='<span style="font-size:.8rem;color:var(--muted)">Aktif: <strong>'+names[profile]+'</strong> — veriler profillere ayrıdır</span>';
+  html+='<span style="font-size:.8rem;color:var(--muted)">Aktif: <strong style="color:'+profs[profile].color+'">'+profs[profile].label+'</strong></span>';
   el.innerHTML=html;
 }
 var now=new Date();
@@ -494,7 +494,7 @@ document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=16',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=17',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
