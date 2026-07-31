@@ -296,7 +296,7 @@ function renderPayments(){
       if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
       html+='<tr><td><input type="checkbox" onchange="togglePaid(\''+esc(l.key)+'\',this)"'+(l.paid?' checked':'')+' style="width:18px;height:18px;accent-color:var(--primary)"></td><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar">'+l.amount.toFixed(0)+' TL</td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
     });
-    html+='<tr class="toplam"><td colspan="5"><strong>Toplam</strong></td><td class="tutar"><strong>'+g.total.toFixed(0)+' TL</strong></td></tr>';
+    html+='<tr class="toplam"><td colspan="5"><strong>Kalan</strong></td><td class="tutar"><strong>'+bal.toFixed(0)+' TL</strong></td></tr>';
     html+='</tbody></table></div>';
   });
   el.innerHTML=html;
@@ -326,14 +326,14 @@ function printPayments(selectedNames){
     var g=groups[n],bal=g.total-g.paid;
     allHtml+='<div style="page-break-inside:avoid;margin-bottom:30px;padding:20px;border:1px solid #ddd;border-radius:8px">';
     allHtml+='<h2 style="margin-bottom:4px">'+esc(n)+'</h2>';
-    allHtml+='<p style="margin-bottom:12px;color:#666;font-size:.9rem">Toplam: '+g.total.toFixed(0)+' TL</p>';
+    allHtml+='<p style="margin-bottom:12px;color:#666;font-size:.9rem">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; Ödenen: '+g.paid.toFixed(0)+' TL &nbsp;·&nbsp; <strong>Kalan: '+bal.toFixed(0)+' TL</strong></p>';
     allHtml+='<table style="width:100%;border-collapse:collapse;font-size:.9rem"><thead><tr style="background:#f5f5f5"><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Ödendi</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Tarih</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Gün</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Saat</th><th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ddd">Tutar</th></tr></thead><tbody>';
     g.lessons.forEach(function(l){
       var fd=formatDate(l.date),dd='';
       if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
       allHtml+='<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center"><input type="checkbox"'+(l.paid?' checked':'')+' disabled style="width:14px;height:14px"></td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(fd||'')+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(dd)+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(l.time||'-')+'</td><td style="padding:6px 10px;text-align:right;border-bottom:1px solid #eee">'+l.amount.toFixed(0)+' TL</td></tr>';
     });
-    allHtml+='<tr style="font-weight:700"><td colspan="4" style="padding:8px 10px;border-top:2px solid #000">Toplam</td><td style="padding:8px 10px;text-align:right;border-top:2px solid #000">'+g.total.toFixed(0)+' TL</td></tr>';
+    allHtml+='<tr style="font-weight:700"><td colspan="4" style="padding:8px 10px;border-top:2px solid #000">Kalan</td><td style="padding:8px 10px;text-align:right;border-top:2px solid #000">'+bal.toFixed(0)+' TL</td></tr>';
     allHtml+='</tbody></table></div>';
   });
   var win=window.open('','_blank');
