@@ -75,6 +75,8 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <div class="container">
 <h1>&#x1F393; Özel Ders Takip <small>program &amp; ödeme</small></h1>
 
+<div id="profile-bar" style="display:flex;gap:8px;align-items:center;margin-bottom:16px"></div>
+
 <div class="tabs">
   <button class="tab active" data-tab="program">&#x1F4C5; Ders Programı</button>
   <button class="tab" data-tab="odemeler">&#x1F4B0; Ödemeler</button>
@@ -89,10 +91,10 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
   </div>
   <div class="toolbar" style="margin-top:8px">
     <span style="font-size:.8rem;color:var(--muted)">Bireysel:</span>
-    <input id="default-rate-bireysel" type="number" value="500" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem('dersDefaultRateBireysel',this.value);pushSettings()">
+    <input id="default-rate-bireysel" type="number" value="500" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyB(),this.value);pushSettings()">
     <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
     <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Grup:</span>
-    <input id="default-rate-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem('dersDefaultRateGrup',this.value);pushSettings()">
+    <input id="default-rate-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyG(),this.value);pushSettings()">
     <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
   </div>
   <div class="toolbar" style="margin-top:8px">
@@ -119,12 +121,18 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-07-31-13';
+var APP_VERSION='2026-07-31-14';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 var weekOffset=0;
 var paymentMonth='';
+var profile=localStorage.getItem('dersProfile')||'ben';
+function setProfile(p){localStorage.setItem('dersProfile',p);location.reload()}
+function progKey(){return'dersTakipProgram_'+profile}
+function payKey(){return'dersTakipOdeme_'+profile}
+function rateKeyB(){return'dersDefaultRateBireysel_'+profile}
+function rateKeyG(){return'dersDefaultRateGrup_'+profile}
 
 /* ---------- TAB ---------- */
 document.querySelectorAll('.tab').forEach(function(t){
@@ -221,7 +229,7 @@ function saveRow(el){
 /* ---------- COPY WEEK ---------- */
 function copyWeekForward(){
   var data;
-  try{data=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}')}catch(e){return}
+  try{data=JSON.parse(localStorage.getItem(progKey())||'{}')}catch(e){return}
   for(var i=0;i<7;i++){
     var srcKey=getDayKey(weekOffset,i),dstKey=getDayKey(weekOffset+1,i);
     var srcRows=data[srcKey];
@@ -230,15 +238,15 @@ function copyWeekForward(){
       data[dstKey]=copy;
     }
   }
-  localStorage.setItem('dersTakipProgram',JSON.stringify(data));
+  localStorage.setItem(progKey(),JSON.stringify(data));
   pushProgram();
 }
 
 /* ---------- DATA ---------- */
 function getDayKey(w,d){return'wk'+w+'d'+d}
-function getDayData(k){try{var a=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}');return a[k]||[]}catch(e){return[]}}
-function saveDayRows(k,r){try{var a=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}');a[k]=r;localStorage.setItem('dersTakipProgram',JSON.stringify(a));pushProgram()}catch(e){}}
-function getDefaultRate(type){var v=parseFloat(localStorage.getItem('dersDefaultRate'+(type==='grup'?'Grup':'Bireysel')));return v>0?v:(type==='grup'?300:500)}
+function getDayData(k){try{var a=JSON.parse(localStorage.getItem(progKey())||'{}');return a[k]||[]}catch(e){return[]}}
+function saveDayRows(k,r){try{var a=JSON.parse(localStorage.getItem(progKey())||'{}');a[k]=r;localStorage.setItem(progKey(),JSON.stringify(a));pushProgram()}catch(e){}}
+function getDefaultRate(type){var v=parseFloat(localStorage.getItem(type==='grup'?rateKeyG():rateKeyB()));return v>0?v:(type==='grup'?300:500)}
 
 /* ---------- FIREBASE SYNC ---------- */
 var fbConfig={apiKey:"AIzaSyA8B_4CRLVHj-XM7cE8uyuYxfNNk1Rqyyc",authDomain:"ders-takip-dfeb9.firebaseapp.com",projectId:"ders-takip-dfeb9",storageBucket:"ders-takip-dfeb9.firebasestorage.app",messagingSenderId:"34397564695",appId:"1:34397564695:web:3490d4f0a340b5507f5152",measurementId:"G-TSJMNHFC7T"};
@@ -248,23 +256,23 @@ try{authReady=firebase.auth().signInAnonymously().then(function(){return true}).
 function whenReady(){return authReady||Promise.resolve(true)}
 function getRaw(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}}
 function fts(){return firebase.firestore.FieldValue.serverTimestamp()}
-function pushProgram(){if(!db)return;clearTimeout(ppTimer);ppTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('program').set({data:getRaw('dersTakipProgram'),t:fts()})}).catch(function(){})},600)}
-function pushPayments(){if(!db)return;clearTimeout(psTimer);psTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('payments').set({data:getRaw('dersTakipOdeme'),t:fts()})}).catch(function(){})},600)}
-function pushSettings(){if(!db)return;clearTimeout(psetTimer);psetTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('settings').set({data:{bireysel:localStorage.getItem('dersDefaultRateBireysel'),grup:localStorage.getItem('dersDefaultRateGrup')},t:fts()})}).catch(function(){})},600)}
+function pushProgram(){if(!db)return;clearTimeout(ppTimer);ppTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('program_'+profile).set({data:getRaw(progKey()),t:fts()})}).catch(function(){})},600)}
+function pushPayments(){if(!db)return;clearTimeout(psTimer);psTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('payments_'+profile).set({data:getRaw(payKey()),t:fts()})}).catch(function(){})},600)}
+function pushSettings(){if(!db)return;clearTimeout(psetTimer);psetTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('settings_'+profile).set({data:{bireysel:localStorage.getItem(rateKeyB()),grup:localStorage.getItem(rateKeyG())},t:fts()})}).catch(function(){})},600)}
 function loadRemote(){
   if(!db)return;
   whenReady().then(function(){
-    if(localStorage.getItem('dersTakipProgram')||localStorage.getItem('dersTakipOdeme')){pushProgram();pushPayments();pushSettings();return}
+    if(localStorage.getItem(progKey())||localStorage.getItem(payKey())){pushProgram();pushPayments();pushSettings();return}
     return db.collection('ders-takip').get().then(function(snap){
       var prog=null,pay=null,set=null,changed=false;
       snap.forEach(function(d){
-        if(d.id==='program')prog=d.data().data;
-        if(d.id==='payments')pay=d.data().data;
-        if(d.id==='settings')set=d.data().data;
+        if(d.id==='program_'+profile)prog=d.data().data;
+        if(d.id==='payments_'+profile)pay=d.data().data;
+        if(d.id==='settings_'+profile)set=d.data().data;
       });
-      if(prog){localStorage.setItem('dersTakipProgram',JSON.stringify(prog));changed=true}
-      if(pay){localStorage.setItem('dersTakipOdeme',JSON.stringify(pay));changed=true}
-      if(set){if(set.bireysel)localStorage.setItem('dersDefaultRateBireysel',set.bireysel);if(set.grup)localStorage.setItem('dersDefaultRateGrup',set.grup)}
+      if(prog){localStorage.setItem(progKey(),JSON.stringify(prog));changed=true}
+      if(pay){localStorage.setItem(payKey(),JSON.stringify(pay));changed=true}
+      if(set){if(set.bireysel)localStorage.setItem(rateKeyB(),set.bireysel);if(set.grup)localStorage.setItem(rateKeyG(),set.grup)}
       if(changed)location.reload();
     });
   }).catch(function(){});
@@ -279,8 +287,8 @@ function calcHours(t){
 }
 
 /* ---------- PAYMENTS ---------- */
-function getPayments(){try{return JSON.parse(localStorage.getItem('dersTakipOdeme')||'{}')}catch(e){return{}}}
-function savePayments(p){localStorage.setItem('dersTakipOdeme',JSON.stringify(p));pushPayments()}
+function getPayments(){try{return JSON.parse(localStorage.getItem(payKey())||'{}')}catch(e){return{}}}
+function savePayments(p){localStorage.setItem(payKey(),JSON.stringify(p));pushPayments()}
 
 function getDateFromDayKey(dayKey){
   var m=dayKey.match(/wk(-?\d+)d(\d)/);if(!m)return'';
@@ -394,9 +402,10 @@ function printPayments(selectedNames){
 function exportBackup(){
   localStorage.setItem('dersLastBackup',new Date().toISOString());
   var d={};
-  ['dersTakipProgram','dersTakipOdeme','dersDefaultRateBireysel','dersDefaultRateGrup','appver'].forEach(function(k){
-    var v=localStorage.getItem(k);if(v!==null)d[k]=v;
-  });
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i);
+    if(k&&(k.indexOf('dersTakipProgram_')===0||k.indexOf('dersTakipOdeme_')===0||k.indexOf('dersDefaultRateBireysel_')===0||k.indexOf('dersDefaultRateGrup_')===0||k==='appver'))d[k]=localStorage.getItem(k);
+  }
   var json=JSON.stringify(d,null,1);
   try{
     var blob=new Blob([json],{type:'application/json'});
@@ -430,10 +439,7 @@ function restoreText(){
   }catch(e){alert('Geçersiz yedek metni. Tam metni kopyaladığından emin ol.');}
 }
 function applyBackup(d){
-  ['dersTakipProgram','dersTakipOdeme','dersDefaultRateBireysel','dersDefaultRateGrup'].forEach(function(k){
-    if(d[k]!==undefined)localStorage.setItem(k,d[k]);
-  });
-  if(d['appver']!==undefined)localStorage.setItem('appver',d['appver']);
+  for(var k in d){if(d.hasOwnProperty(k))localStorage.setItem(k,d[k]);}
   alert('Veriler geri yüklendi.');
   location.reload();
 }
@@ -462,7 +468,25 @@ function checkBackup(){
 }
 
 /* ---------- INIT ---------- */
+function renderProfileBar(){
+  var el=document.getElementById('profile-bar');
+  var names={'ben':'Ben','esim':'Eşim'};
+  var html='<span style="font-size:.85rem;color:var(--muted)">Profil:</span>';
+  Object.keys(names).forEach(function(p){
+    var active=p===profile;
+    html+='<button onclick="setProfile(\''+p+'\')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:.85rem;font-weight:600;background:'+(active?'var(--primary)':'#fff')+';color:'+(active?'#fff':'var(--text)')+'">'+names[p]+'</button>';
+  });
+  html+='<span style="font-size:.8rem;color:var(--muted)">Aktif: <strong>'+names[profile]+'</strong> — veriler profillere ayrıdır</span>';
+  el.innerHTML=html;
+}
 var now=new Date();
+try{
+  if(!localStorage.getItem('dersTakipProgram_ben')&&localStorage.getItem('dersTakipProgram'))localStorage.setItem('dersTakipProgram_ben',localStorage.getItem('dersTakipProgram'));
+  if(!localStorage.getItem('dersTakipOdeme_ben')&&localStorage.getItem('dersTakipOdeme'))localStorage.setItem('dersTakipOdeme_ben',localStorage.getItem('dersTakipOdeme'));
+  if(!localStorage.getItem('dersDefaultRateBireysel_ben')&&localStorage.getItem('dersDefaultRateBireysel'))localStorage.setItem('dersDefaultRateBireysel_ben',localStorage.getItem('dersDefaultRateBireysel'));
+  if(!localStorage.getItem('dersDefaultRateGrup_ben')&&localStorage.getItem('dersDefaultRateGrup'))localStorage.setItem('dersDefaultRateGrup_ben',localStorage.getItem('dersDefaultRateGrup'));
+}catch(e){}
+renderProfileBar();
 paymentMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
 document.getElementById('month-filter').value=paymentMonth;
 document.getElementById('default-rate-bireysel').value=getDefaultRate('bireysel');
@@ -470,7 +494,7 @@ document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=15',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=16',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
