@@ -112,7 +112,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 </div>
 
 <script>
-var APP_VERSION='2026-07-31-3';
+var APP_VERSION='2026-07-31-4';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -291,7 +291,7 @@ function renderPayments(){
   var html='';
   names.forEach(function(n){
     var g=groups[n],bal=g.total-g.paid;
-    html+='<div class="student-card"><h3><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input class="student-select" type="checkbox" data-name="'+esc(n)+'" checked style="width:18px;height:18px;accent-color:var(--primary)"> '+esc(n)+'</label></h3><div class="summary">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; <span style="color:var(--ok,green)">Ödenen: '+g.paid.toFixed(0)+' TL</span>'+(bal>0?' &nbsp;·&nbsp; <span style="color:#dc2626">Kalan: '+bal.toFixed(0)+' TL</span>':'')+'</div>';
+    html+='<div class="student-card"><h3><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input class="student-select" type="checkbox" data-name="'+esc(n)+'" style="width:18px;height:18px;accent-color:var(--primary)"> '+esc(n)+'</label></h3><div class="summary">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; <span style="color:var(--ok,green)">Ödenen: '+g.paid.toFixed(0)+' TL</span>'+(bal>0?' &nbsp;·&nbsp; <span style="color:#dc2626">Kalan: '+bal.toFixed(0)+' TL</span>':'')+'</div>';
     html+='<table><thead><tr><th>Ödendi</th><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th><th></th></tr></thead><tbody>';
     g.lessons.forEach(function(l){
       var fd=formatDate(l.date),dd='';
@@ -351,7 +351,7 @@ document.getElementById('month-filter').value=paymentMonth;
 document.getElementById('default-rate-bireysel').value=getDefaultRate('bireysel');
 document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=5',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=6',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
