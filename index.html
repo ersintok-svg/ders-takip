@@ -117,7 +117,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 </div>
 
 <script>
-var APP_VERSION='2026-07-31-7';
+var APP_VERSION='2026-07-31-8';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -158,9 +158,8 @@ function renderSchedule(){
 
 function renderRow(dk,idx,row){
   var ch=row.done?'checked':'',cls=row.done?' done':'',t=row.type||'bireysel';
-  var dis=weekOffset>0?' disabled':'';
   return '<div class="cal-row'+cls+'" data-key="'+dk+'" data-idx="'+idx+'">'+
-    '<input type="checkbox" '+ch+dis+' onchange="toggleRow(this)">'+
+    '<input type="checkbox" '+ch+' onchange="toggleRow(this)">'+
     '<select onchange="changeType(this)" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
     '<option value="bireysel"'+(t==='bireysel'?' selected':'')+'>B</option>'+
     '<option value="grup"'+(t==='grup'?' selected':'')+'>G</option></select>'+
@@ -399,7 +398,7 @@ document.getElementById('month-filter').value=paymentMonth;
 document.getElementById('default-rate-bireysel').value=getDefaultRate('bireysel');
 document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=9',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=10',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
