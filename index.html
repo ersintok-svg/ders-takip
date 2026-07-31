@@ -116,9 +116,10 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-07-31-12';
+var APP_VERSION='2026-07-31-13';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -241,27 +242,31 @@ function getDefaultRate(type){var v=parseFloat(localStorage.getItem('dersDefault
 
 /* ---------- FIREBASE SYNC ---------- */
 var fbConfig={apiKey:"AIzaSyA8B_4CRLVHj-XM7cE8uyuYxfNNk1Rqyyc",authDomain:"ders-takip-dfeb9.firebaseapp.com",projectId:"ders-takip-dfeb9",storageBucket:"ders-takip-dfeb9.firebasestorage.app",messagingSenderId:"34397564695",appId:"1:34397564695:web:3490d4f0a340b5507f5152",measurementId:"G-TSJMNHFC7T"};
-var db=null,ppTimer=null,psTimer=null,psetTimer=null;
+var db=null,ppTimer=null,psTimer=null,psetTimer=null,authReady=null;
 try{firebase.initializeApp(fbConfig);db=firebase.firestore()}catch(e){db=null}
+try{authReady=firebase.auth().signInAnonymously().then(function(){return true}).catch(function(){return false})}catch(e){authReady=Promise.resolve(false)}
+function whenReady(){return authReady||Promise.resolve(true)}
 function getRaw(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}}
 function fts(){return firebase.firestore.FieldValue.serverTimestamp()}
-function pushProgram(){if(!db)return;clearTimeout(ppTimer);ppTimer=setTimeout(function(){db.collection('ders-takip').doc('program').set({data:getRaw('dersTakipProgram'),t:fts()}).catch(function(){})},600)}
-function pushPayments(){if(!db)return;clearTimeout(psTimer);psTimer=setTimeout(function(){db.collection('ders-takip').doc('payments').set({data:getRaw('dersTakipOdeme'),t:fts()}).catch(function(){})},600)}
-function pushSettings(){if(!db)return;clearTimeout(psetTimer);psetTimer=setTimeout(function(){db.collection('ders-takip').doc('settings').set({data:{bireysel:localStorage.getItem('dersDefaultRateBireysel'),grup:localStorage.getItem('dersDefaultRateGrup')},t:fts()}).catch(function(){})},600)}
+function pushProgram(){if(!db)return;clearTimeout(ppTimer);ppTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('program').set({data:getRaw('dersTakipProgram'),t:fts()})}).catch(function(){})},600)}
+function pushPayments(){if(!db)return;clearTimeout(psTimer);psTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('payments').set({data:getRaw('dersTakipOdeme'),t:fts()})}).catch(function(){})},600)}
+function pushSettings(){if(!db)return;clearTimeout(psetTimer);psetTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('settings').set({data:{bireysel:localStorage.getItem('dersDefaultRateBireysel'),grup:localStorage.getItem('dersDefaultRateGrup')},t:fts()})}).catch(function(){})},600)}
 function loadRemote(){
   if(!db)return;
-  if(localStorage.getItem('dersTakipProgram')||localStorage.getItem('dersTakipOdeme')){pushProgram();pushPayments();pushSettings();return}
-  db.collection('ders-takip').get().then(function(snap){
-    var prog=null,pay=null,set=null,changed=false;
-    snap.forEach(function(d){
-      if(d.id==='program')prog=d.data().data;
-      if(d.id==='payments')pay=d.data().data;
-      if(d.id==='settings')set=d.data().data;
+  whenReady().then(function(){
+    if(localStorage.getItem('dersTakipProgram')||localStorage.getItem('dersTakipOdeme')){pushProgram();pushPayments();pushSettings();return}
+    return db.collection('ders-takip').get().then(function(snap){
+      var prog=null,pay=null,set=null,changed=false;
+      snap.forEach(function(d){
+        if(d.id==='program')prog=d.data().data;
+        if(d.id==='payments')pay=d.data().data;
+        if(d.id==='settings')set=d.data().data;
+      });
+      if(prog){localStorage.setItem('dersTakipProgram',JSON.stringify(prog));changed=true}
+      if(pay){localStorage.setItem('dersTakipOdeme',JSON.stringify(pay));changed=true}
+      if(set){if(set.bireysel)localStorage.setItem('dersDefaultRateBireysel',set.bireysel);if(set.grup)localStorage.setItem('dersDefaultRateGrup',set.grup)}
+      if(changed)location.reload();
     });
-    if(prog){localStorage.setItem('dersTakipProgram',JSON.stringify(prog));changed=true}
-    if(pay){localStorage.setItem('dersTakipOdeme',JSON.stringify(pay));changed=true}
-    if(set){if(set.bireysel)localStorage.setItem('dersDefaultRateBireysel',set.bireysel);if(set.grup)localStorage.setItem('dersDefaultRateGrup',set.grup)}
-    if(changed)location.reload();
   }).catch(function(){});
 }
 
@@ -465,7 +470,7 @@ document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=14',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=15',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
