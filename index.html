@@ -89,10 +89,10 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
   </div>
   <div class="toolbar" style="margin-top:8px">
     <span style="font-size:.8rem;color:var(--muted)">Bireysel:</span>
-    <input id="default-rate-bireysel" type="number" value="500" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem('dersDefaultRateBireysel',this.value)">
+    <input id="default-rate-bireysel" type="number" value="500" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem('dersDefaultRateBireysel',this.value);pushSettings()">
     <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
     <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Grup:</span>
-    <input id="default-rate-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem('dersDefaultRateGrup',this.value)">
+    <input id="default-rate-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem('dersDefaultRateGrup',this.value);pushSettings()">
     <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
   </div>
   <div class="toolbar" style="margin-top:8px">
@@ -115,8 +115,10 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-07-31-11';
+var APP_VERSION='2026-07-31-12';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -228,13 +230,40 @@ function copyWeekForward(){
     }
   }
   localStorage.setItem('dersTakipProgram',JSON.stringify(data));
+  pushProgram();
 }
 
 /* ---------- DATA ---------- */
 function getDayKey(w,d){return'wk'+w+'d'+d}
 function getDayData(k){try{var a=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}');return a[k]||[]}catch(e){return[]}}
-function saveDayRows(k,r){try{var a=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}');a[k]=r;localStorage.setItem('dersTakipProgram',JSON.stringify(a))}catch(e){}}
+function saveDayRows(k,r){try{var a=JSON.parse(localStorage.getItem('dersTakipProgram')||'{}');a[k]=r;localStorage.setItem('dersTakipProgram',JSON.stringify(a));pushProgram()}catch(e){}}
 function getDefaultRate(type){var v=parseFloat(localStorage.getItem('dersDefaultRate'+(type==='grup'?'Grup':'Bireysel')));return v>0?v:(type==='grup'?300:500)}
+
+/* ---------- FIREBASE SYNC ---------- */
+var fbConfig={apiKey:"AIzaSyA8B_4CRLVHj-XM7cE8uyuYxfNNk1Rqyyc",authDomain:"ders-takip-dfeb9.firebaseapp.com",projectId:"ders-takip-dfeb9",storageBucket:"ders-takip-dfeb9.firebasestorage.app",messagingSenderId:"34397564695",appId:"1:34397564695:web:3490d4f0a340b5507f5152",measurementId:"G-TSJMNHFC7T"};
+var db=null,ppTimer=null,psTimer=null,psetTimer=null;
+try{firebase.initializeApp(fbConfig);db=firebase.firestore()}catch(e){db=null}
+function getRaw(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}}
+function fts(){return firebase.firestore.FieldValue.serverTimestamp()}
+function pushProgram(){if(!db)return;clearTimeout(ppTimer);ppTimer=setTimeout(function(){db.collection('ders-takip').doc('program').set({data:getRaw('dersTakipProgram'),t:fts()}).catch(function(){})},600)}
+function pushPayments(){if(!db)return;clearTimeout(psTimer);psTimer=setTimeout(function(){db.collection('ders-takip').doc('payments').set({data:getRaw('dersTakipOdeme'),t:fts()}).catch(function(){})},600)}
+function pushSettings(){if(!db)return;clearTimeout(psetTimer);psetTimer=setTimeout(function(){db.collection('ders-takip').doc('settings').set({data:{bireysel:localStorage.getItem('dersDefaultRateBireysel'),grup:localStorage.getItem('dersDefaultRateGrup')},t:fts()}).catch(function(){})},600)}
+function loadRemote(){
+  if(!db)return;
+  if(localStorage.getItem('dersTakipProgram')||localStorage.getItem('dersTakipOdeme')){pushProgram();pushPayments();pushSettings();return}
+  db.collection('ders-takip').get().then(function(snap){
+    var prog=null,pay=null,set=null,changed=false;
+    snap.forEach(function(d){
+      if(d.id==='program')prog=d.data().data;
+      if(d.id==='payments')pay=d.data().data;
+      if(d.id==='settings')set=d.data().data;
+    });
+    if(prog){localStorage.setItem('dersTakipProgram',JSON.stringify(prog));changed=true}
+    if(pay){localStorage.setItem('dersTakipOdeme',JSON.stringify(pay));changed=true}
+    if(set){if(set.bireysel)localStorage.setItem('dersDefaultRateBireysel',set.bireysel);if(set.grup)localStorage.setItem('dersDefaultRateGrup',set.grup)}
+    if(changed)location.reload();
+  }).catch(function(){});
+}
 
 function calcHours(t){
   if(!t)return 0;
@@ -246,7 +275,7 @@ function calcHours(t){
 
 /* ---------- PAYMENTS ---------- */
 function getPayments(){try{return JSON.parse(localStorage.getItem('dersTakipOdeme')||'{}')}catch(e){return{}}}
-function savePayments(p){localStorage.setItem('dersTakipOdeme',JSON.stringify(p))}
+function savePayments(p){localStorage.setItem('dersTakipOdeme',JSON.stringify(p));pushPayments()}
 
 function getDateFromDayKey(dayKey){
   var m=dayKey.match(/wk(-?\d+)d(\d)/);if(!m)return'';
@@ -435,7 +464,8 @@ document.getElementById('default-rate-bireysel').value=getDefaultRate('bireysel'
 document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
 checkBackup();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=13',{updateViaCache:'none'}).then(function(r){r.update()});
+loadRemote();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=14',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
