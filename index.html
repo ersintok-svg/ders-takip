@@ -49,6 +49,10 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 .cal-row .row-time{width:92px;border:none;outline:none;font-size:.8rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--muted);text-align:right;flex-shrink:0}
 .cal-row .row-time:focus{background:#f0f0ff;border-radius:4px}
 .cal-row.done .row-name,.cal-row.done .row-time{text-decoration:line-through;color:#bbb}
+.cal-row.missed{background:#fef2f2}
+.cal-row.missed .row-name{color:#dc2626;font-weight:600}
+.missed-btn{padding:3px 8px;font-size:.7rem;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--muted);cursor:pointer;flex-shrink:0;transition:.2s}
+.missed-btn.on{background:#dc2626;border-color:#dc2626;color:#fff;font-weight:600}
 .cal-add{display:block;width:100%;padding:8px;border:1px dashed var(--border);border-radius:6px;background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;text-align:center;transition:.2s}
 .cal-add:hover{background:var(--bg);color:var(--primary);border-color:var(--primary)}
 .delete-row{width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1;flex-shrink:0;opacity:0;transition:.2s}
@@ -138,7 +142,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-6';
+var APP_VERSION='2026-08-06-7';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -186,9 +190,9 @@ function renderSchedule(){
 }
 
 function renderRow(dk,idx,row){
-  var ch=row.done?'checked':'',cls=row.done?' done':'',t=row.type||'bireysel';
+  var ch=row.done?'checked':'',cls=row.done?' done':'',mcls=row.missed?' missed':'',t=row.type||'bireysel';
   var tp=parseTimePair(row.time||'');
-  return '<div class="cal-row'+cls+'" data-key="'+dk+'" data-idx="'+idx+'">'+
+  return '<div class="cal-row'+cls+mcls+'" data-key="'+dk+'" data-idx="'+idx+'">'+
     '<input type="checkbox" '+ch+' onchange="toggleRow(this)">'+
     '<select onchange="changeType(this)" title="B=Bireysel · G=Grup · OB=Online Bireysel · OG=Online Grup" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
     '<option value="bireysel"'+(t==='bireysel'?' selected':'')+'>B</option>'+
@@ -199,6 +203,7 @@ function renderRow(dk,idx,row){
     '<input class="row-time row-time-start" type="time" value="'+tp[0]+'" title="Başlangıç saati" oninput="saveRow(this)">'+
     '<span style="color:var(--muted);font-size:.85rem;flex-shrink:0">-</span>'+
     '<input class="row-time row-time-end" type="time" value="'+tp[1]+'" title="Bitiş saati" oninput="saveRow(this)">'+
+    '<button class="missed-btn'+(row.missed?' on':'')+'" onclick="toggleMissed(this)" title="Derse gelmedi">Gelmedi</button>'+
     '<button onclick="deleteRow(this)" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1;flex-shrink:0">x</button></div>';
 }
 
@@ -212,10 +217,10 @@ function changeType(el){
   if(rows[g.idx].done){var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*rows[g.idx].rate,rows[g.idx].type)}
 }
 function addRow(dk){
-  var rows=getDayData(dk);rows.push({name:'',time:'',done:false,type:'bireysel',rate:getDefaultRate('bireysel')});
+  var rows=getDayData(dk);rows.push({name:'',time:'',done:false,missed:false,type:'bireysel',rate:getDefaultRate('bireysel')});
   saveDayRows(dk,rows);
   var c=document.getElementById('boxes-'+dk);
-  c.insertAdjacentHTML('beforeend',renderRow(dk,rows.length-1,{name:'',time:'',done:false,type:'bireysel',rate:getDefaultRate('bireysel')}));
+  c.insertAdjacentHTML('beforeend',renderRow(dk,rows.length-1,{name:'',time:'',done:false,missed:false,type:'bireysel',rate:getDefaultRate('bireysel')}));
   var inp=c.querySelectorAll('.row-name');if(inp.length)inp[inp.length-1].focus();
 }
 function deleteRow(el){
@@ -230,13 +235,33 @@ function toggleRow(cb){
     var g=getRow(cb);if(!g)return;
     var rows=getDayData(g.key);if(!rows[g.idx])return;
     rows[g.idx].done=cb.checked;
+    if(cb.checked)rows[g.idx].missed=false;
     g.row.classList.toggle('done',cb.checked);
-      var key=g.key+'-'+g.idx;
+    g.row.classList.toggle('missed',!!rows[g.idx].missed);
+    var mb=g.row.querySelector('.missed-btn');if(mb)mb.classList.toggle('on',!!rows[g.idx].missed);
+    var key=g.key+'-'+g.idx;
     if(cb.checked){
       var r=rows[g.idx],name=r.name||'İsimsiz',time=r.time||'',t=r.type||'bireysel',rate=r.rate>0?r.rate:getDefaultRate(t);
       var hours=calcHours(time)||1,amt=hours*rate;
       addPayment(key,name,g.key,time,amt,t);
     }else{removePayment(key)}
+    saveDayRows(g.key,rows);
+  }catch(e){alert('Hata: '+e.message)}
+}
+function toggleMissed(el){
+  try{
+    if(weekOffset>0){alert('Gelecek hafta dersleri işaretlenemez.');return}
+    var g=getRow(el);if(!g)return;
+    var rows=getDayData(g.key);if(!rows[g.idx])return;
+    rows[g.idx].missed=!rows[g.idx].missed;
+    if(rows[g.idx].missed&&rows[g.idx].done){
+      rows[g.idx].done=false;
+      removePayment(g.key+'-'+g.idx);
+    }
+    g.row.classList.toggle('missed',!!rows[g.idx].missed);
+    g.row.classList.toggle('done',!!rows[g.idx].done);
+    var cb=g.row.querySelector('input[type=checkbox]');if(cb)cb.checked=!!rows[g.idx].done;
+    var mb=g.row.querySelector('.missed-btn');if(mb)mb.classList.toggle('on',!!rows[g.idx].missed);
     saveDayRows(g.key,rows);
   }catch(e){alert('Hata: '+e.message)}
 }
@@ -269,7 +294,7 @@ function copyWeekForward(){
     srcKey=getDayKey(weekOffset,i);dstKey=getDayKey(weekOffset+1,i);
     srcRows=data[srcKey];
     if(srcRows&&srcRows.length){
-      var copy=srcRows.map(function(r){return{name:r.name,time:r.time,rate:r.rate,type:r.type||'bireysel',done:false}});
+      var copy=srcRows.map(function(r){return{name:r.name,time:r.time,rate:r.rate,type:r.type||'bireysel',done:false,missed:false}});
       data[dstKey]=copy;
     }
   }
@@ -590,6 +615,9 @@ function auditData(){
         var key=dk+'-'+ri;
         lines.push((r.name||'İsimsiz')+'  ['+dk+' '+ (r.time||'-')+']  => işaretli'+(pay[key]?'  (ödeme var)':'  (!!! ödeme YOK)'));
       }
+      if(r&&r.missed){
+        lines.push((r.name||'İsimsiz')+'  ['+dk+' '+ (r.time||'-')+']  => GELMEDİ');
+      }
     });
   });
   payKeys.forEach(function(k){
@@ -652,7 +680,7 @@ document.getElementById('default-rate-online-grup').value=getDefaultRate('online
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=24',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=25',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
