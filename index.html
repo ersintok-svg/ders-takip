@@ -111,6 +111,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
     <button class="btn btn-primary btn-sm" onclick="printSelected()">&#x1F5A8; Seçili Öğrencileri PDF Gönder</button>
     <button class="btn btn-outline btn-sm" onclick="document.querySelectorAll('.student-select').forEach(function(c){c.checked=true});renderPayments()">Tümünü Seç</button>
     <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;color:var(--muted)">Ay: <input id="month-filter" type="month" onchange="paymentMonth=this.value;renderPayments()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.85rem;outline:none;background:transparent;color:var(--text)"></label>
+    <button class="btn btn-outline btn-sm" onclick="paymentMonth='';document.getElementById('month-filter').value='';renderPayments()">&#x1F4C6; Tümü</button>
     <button class="btn btn-outline btn-sm" onclick="renderPayments()">&#x21BB; Yenile</button>
   </div>
   <div id="payments-content"></div>
@@ -121,7 +122,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-07-31-16';
+var APP_VERSION='2026-08-06-1';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -320,6 +321,12 @@ function togglePaid(key,cb){
   if(p[key])p[key].paid=cb.checked;
   savePayments(p);renderPayments();
 }
+function payAll(name){
+  var p=getPayments(),changed=false;
+  for(var k in p){if(p[k].name===name&&!p[k].paid){p[k].paid=true;changed=true}}
+  if(changed)savePayments(p);
+  renderPayments();
+}
 function updateAmount(key,el){
   var v=parseFloat(el.value);
   if(isNaN(v)||v<0)v=0;
@@ -333,7 +340,7 @@ function renderPayments(){
   var p=getPayments(),keys=Object.keys(p),el=document.getElementById('payments-content');
   if(!keys.length){el.innerHTML='<div class="empty-state"><p>Henüz işlenmiş ders yok.</p><p style="font-size:.85rem">Ders Programı\'nda checkbox işaretleyince buraya eklenir.</p></div>';return}
   if(paymentMonth) keys=keys.filter(function(k){return p[k].date&&p[k].date.slice(0,7)===paymentMonth});
-  if(!keys.length){el.innerHTML='<div class="empty-state"><p>Bu aya ait ders bulunamadı.</p></div>';return}
+  if(!keys.length){el.innerHTML='<div class="empty-state"><p>'+(paymentMonth?'Bu aya ait ders bulunamadı.':'Henüz işlenmiş ders yok.')+'</p><p style="font-size:.85rem">Ders Programı\'nda checkbox işaretleyince buraya eklenir.</p></div>';return}
   var groups={};
   keys.forEach(function(k){
     var e=p[k];if(!groups[e.name])groups[e.name]={lessons:[],total:0,paid:0};
@@ -341,11 +348,16 @@ function renderPayments(){
     groups[e.name].total+=e.amount;
     if(e.paid)groups[e.name].paid+=e.amount;
   });
-  var names=Object.keys(groups).sort();
+  var names=Object.keys(groups).sort(),grandUnpaid=0;
   var html='';
   names.forEach(function(n){
     var g=groups[n],bal=g.total-g.paid;
-    html+='<div class="student-card"><h3><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input class="student-select" type="checkbox" data-name="'+esc(n)+'" style="width:18px;height:18px;accent-color:var(--primary)"> '+esc(n)+'</label></h3><div class="summary">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; <span style="color:var(--ok,green)">Ödenen: '+g.paid.toFixed(0)+' TL</span>'+(bal>0?' &nbsp;·&nbsp; <span style="color:#dc2626">Kalan: '+bal.toFixed(0)+' TL</span>':'')+'</div>';
+    grandUnpaid+=bal;
+  });
+  if(grandUnpaid>0)html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><strong style="font-size:1rem">&#128176; Tahsil edilecek toplam</strong><div style="font-size:.8rem;color:var(--muted)">(ödenmemiş tüm dersler)</div></div><div style="font-size:1.4rem;font-weight:700;color:#dc2626">'+grandUnpaid.toFixed(0)+' TL</div></div>';
+  names.forEach(function(n){
+    var g=groups[n],bal=g.total-g.paid;
+    html+='<div class="student-card"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1"><input class="student-select" type="checkbox" data-name="'+esc(n)+'" style="width:18px;height:18px;accent-color:var(--primary)"> '+esc(n)+'</label>'+(bal>0?'<button class="btn btn-outline btn-sm" onclick="payAll(\''+esc(n)+'\')" style="flex-shrink:0">Tümünü Ödendi Yap</button>':'<span style="color:#059669;font-weight:700;font-size:.85rem;flex-shrink:0">&#10003; Tümü ödendi</span>')+'</h3><div class="summary">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; <span style="color:var(--ok,green)">Ödenen: '+g.paid.toFixed(0)+' TL</span>'+(bal>0?' &nbsp;·&nbsp; <span style="color:#dc2626">Kalan: '+bal.toFixed(0)+' TL</span>':'')+'</div>';
     html+='<table><thead><tr><th>Ödendi</th><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th><th></th></tr></thead><tbody>';
     g.lessons.forEach(function(l){
       var fd=formatDate(l.date),dd='';
@@ -500,7 +512,7 @@ document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=18',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=19',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
