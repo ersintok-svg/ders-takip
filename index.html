@@ -142,7 +142,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-7';
+var APP_VERSION='2026-08-06-8';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -214,7 +214,7 @@ function changeType(el){
   rows[g.idx].type=el.value;
   rows[g.idx].rate=getDefaultRate(el.value);
   saveDayRows(g.key,rows);
-  if(rows[g.idx].done){var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*rows[g.idx].rate,rows[g.idx].type)}
+  if(rows[g.idx].done){var h=lessonHours(rows[g.idx].type||'bireysel',rows[g.idx].time||'');updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*rows[g.idx].rate,rows[g.idx].type)}
 }
 function addRow(dk){
   var rows=getDayData(dk);rows.push({name:'',time:'',done:false,missed:false,type:'bireysel',rate:getDefaultRate('bireysel')});
@@ -242,7 +242,7 @@ function toggleRow(cb){
     var key=g.key+'-'+g.idx;
     if(cb.checked){
       var r=rows[g.idx],name=r.name||'İsimsiz',time=r.time||'',t=r.type||'bireysel',rate=r.rate>0?r.rate:getDefaultRate(t);
-      var hours=calcHours(time)||1,amt=hours*rate;
+      var amt=lessonHours(t,time)*rate;
       addPayment(key,name,g.key,time,amt,t);
     }else{removePayment(key)}
     saveDayRows(g.key,rows);
@@ -274,7 +274,7 @@ function saveRow(el){
   rows[g.idx].time=(t1||t2)?t1+'-'+t2:'';
   var sel=g.row.querySelector('select');if(sel)rows[g.idx].type=sel.value;
   saveDayRows(g.key,rows);
-  if(rows[g.idx].done){var r=rows[g.idx].rate>0?rows[g.idx].rate:getDefaultRate(rows[g.idx].type||'bireysel');var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*r,rows[g.idx].type)}
+  if(rows[g.idx].done){var r=rows[g.idx].rate>0?rows[g.idx].rate:getDefaultRate(rows[g.idx].type||'bireysel');var h=lessonHours(rows[g.idx].type||'bireysel',rows[g.idx].time||'');updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*r,rows[g.idx].type)}
 }
 
 /* ---------- COPY WEEK ---------- */
@@ -348,6 +348,11 @@ function calcHours(t){
   var s=p[0].trim().split(':').map(Number),e=p[1].trim().split(':').map(Number);
   if(s.length<2||e.length<2||isNaN(s[0])||isNaN(e[0]))return 0;
   var h=(e[0]*60+(e[1]||0)-s[0]*60-(s[1]||0))/60;return h>0?+h.toFixed(2):0;
+}
+var ONLINE_HOURS=1.5;
+function lessonHours(type,time){
+  if(type==='onlineBireysel'||type==='onlineGrup')return ONLINE_HOURS;
+  return calcHours(time)||1;
 }
 function normalizeTime(v){
   if(!v)return'';
@@ -680,7 +685,7 @@ document.getElementById('default-rate-online-grup').value=getDefaultRate('online
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=25',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=26',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
