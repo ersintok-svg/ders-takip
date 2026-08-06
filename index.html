@@ -69,7 +69,9 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 .cal-row .row-name:focus{background:#f0f0ff;border-radius:4px}
 .cal-row .row-time{width:92px;border:none;outline:none;font-size:.8rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--muted);text-align:right;flex-shrink:0}
 .cal-row .row-time:focus{background:#f0f0ff;border-radius:4px}
-.cal-row.done .row-name,.cal-row.done .row-time{text-decoration:line-through;color:#bbb}
+.cal-row .row-amount{width:74px;border:none;outline:none;font-size:.8rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--text);text-align:right;flex-shrink:0}
+.cal-row .row-amount:focus{background:#f0f0ff;border-radius:4px}
+.cal-row.done .row-name,.cal-row.done .row-time,.cal-row.done .row-amount{text-decoration:line-through;color:#bbb}
 .cal-row.missed{background:#fef2f2}
 .cal-row.missed .row-name{color:#dc2626;font-weight:600}
 .missed-btn{padding:3px 8px;font-size:.7rem;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--muted);cursor:pointer;flex-shrink:0;transition:.2s}
@@ -93,7 +95,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 .empty-state{padding:60px 20px;text-align:center;color:var(--muted)}
 .empty-state p{margin-bottom:12px;font-size:1rem}
 @media print{body{background:#fff;padding:0}.tabs,.toolbar,.cal-add,.delete-row{display:none!important}.panel{display:block!important}.container{max-width:100%}.student-card{break-inside:avoid;box-shadow:none;border:1px solid #ddd;border-radius:4px}}
-@media(max-width:600px){body{padding:8px}.cal-row{flex-wrap:wrap;gap:3px;padding:6px 0}.cal-row .row-name{flex:1;min-width:80px;font-size:.9rem;padding:4px 2px}.cal-row .row-time{flex:1;min-width:80px;font-size:.85rem;padding:4px 2px}.cal-row .row-type{font-size:.8rem!important;padding:2px 6px!important}.cal-boxes{padding:4px 6px}.cal-add{font-size:.75rem;padding:6px}.cal-day-header{padding:8px 10px;font-size:.85rem}.student-card table{font-size:.8rem}.student-card th,.student-card td{padding:6px}}
+@media(max-width:600px){body{padding:8px}.cal-row{flex-wrap:wrap;gap:3px;padding:6px 0}.cal-row .row-name{flex:1;min-width:80px;font-size:.9rem;padding:4px 2px}.cal-row .row-time{flex:1;min-width:80px;font-size:.85rem;padding:4px 2px}.cal-row .row-amount{flex:1;min-width:70px;font-size:.85rem;padding:4px 2px}.cal-row .row-type{font-size:.8rem!important;padding:2px 6px!important}.cal-boxes{padding:4px 6px}.cal-add{font-size:.75rem;padding:6px}.cal-day-header{padding:8px 10px;font-size:.85rem}.student-card table{font-size:.8rem}.student-card th,.student-card td{padding:6px}}
 </style>
 </head>
 <body>
@@ -127,7 +129,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
     <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Online Grup:</span>
     <input id="default-rate-online-grup" type="number" value="1125" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyOG(),this.value);pushSettings()">
     <span style="font-size:.8rem;color:var(--muted)">TL/1.5 saat</span>
-    <span style="font-size:.75rem;color:var(--muted);flex-basis:100%">Online ders ücreti = 1.5 saatlik dersin toplam tutarı (Bireysel 2200, Grup 1125). Yüzyüze dersler saat başına hesaplanır.</span>
+    <span style="font-size:.75rem;color:var(--muted);flex-basis:100%">Her dersin yanına saat ve ücreti yaz; sonraki haftalara aynen kopyalanır. Ücret boş kalırsa genel ücret uygulanır. Online ders ücreti = 1.5 saatlik dersin toplam tutarı (Bireysel 2200, Grup 1125). Yüzyüze dersler saat başına hesaplanır.</span>
   </div>
   <div class="toolbar" style="margin-top:8px">
     <button class="btn btn-outline btn-sm" onclick="exportBackup()">&#128190; Yedek Al</button>
@@ -164,7 +166,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-10';
+var APP_VERSION='2026-08-06-11';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -225,6 +227,7 @@ function renderRow(dk,idx,row){
     '<input class="row-time row-time-start" type="time" value="'+tp[0]+'" title="Başlangıç saati" oninput="saveRow(this)">'+
     '<span style="color:var(--muted);font-size:.85rem;flex-shrink:0">-</span>'+
     '<input class="row-time row-time-end" type="time" value="'+tp[1]+'" title="Bitiş saati" oninput="saveRow(this)">'+
+    '<input class="row-amount" type="number" min="0" step="1" value="'+(row.amount>0?row.amount:'')+'" placeholder="Ücret" title="Ders ücreti (boş kalırsa genel ücret uygulanır)" oninput="saveRow(this)">'+
     '<button class="missed-btn'+(row.missed?' on':'')+'" onclick="toggleMissed(this)" title="Derse gelmedi">Gelmedi</button>'+
     '<button onclick="deleteRow(this)" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1;flex-shrink:0">x</button></div>';
 }
@@ -234,15 +237,14 @@ function changeType(el){
   var g=getRow(el);if(!g)return;
   var rows=getDayData(g.key);if(!rows[g.idx])return;
   rows[g.idx].type=el.value;
-  rows[g.idx].rate=getDefaultRate(el.value);
   saveDayRows(g.key,rows);
-  if(rows[g.idx].done){var h=lessonHours(rows[g.idx].type||'bireysel',rows[g.idx].time||'');updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*rows[g.idx].rate,rows[g.idx].type)}
+  if(rows[g.idx].done){var row=rows[g.idx];updatePaymentAmount(g.key+'-'+g.idx,row.name,row.time,getRowAmount(row),row.type)}
 }
 function addRow(dk){
-  var rows=getDayData(dk);rows.push({name:'',time:'',done:false,missed:false,type:'bireysel',rate:getDefaultRate('bireysel')});
+  var rows=getDayData(dk);rows.push({name:'',time:'',done:false,missed:false,type:'bireysel'});
   saveDayRows(dk,rows);
   var c=document.getElementById('boxes-'+dk);
-  c.insertAdjacentHTML('beforeend',renderRow(dk,rows.length-1,{name:'',time:'',done:false,missed:false,type:'bireysel',rate:getDefaultRate('bireysel')}));
+  c.insertAdjacentHTML('beforeend',renderRow(dk,rows.length-1,{name:'',time:'',done:false,missed:false,type:'bireysel'}));
   var inp=c.querySelectorAll('.row-name');if(inp.length)inp[inp.length-1].focus();
 }
 function deleteRow(el){
@@ -263,9 +265,8 @@ function toggleRow(cb){
     var mb=g.row.querySelector('.missed-btn');if(mb)mb.classList.toggle('on',!!rows[g.idx].missed);
     var key=g.key+'-'+g.idx;
     if(cb.checked){
-      var r=rows[g.idx],name=r.name||'İsimsiz',time=r.time||'',t=r.type||'bireysel',rate=r.rate>0?r.rate:getDefaultRate(t);
-      var amt=lessonHours(t,time)*rate;
-      addPayment(key,name,g.key,time,amt,t);
+      var r=rows[g.idx],name=r.name||'İsimsiz',time=r.time||'',t=r.type||'bireysel';
+      addPayment(key,name,g.key,time,getRowAmount(r),t);
     }else{removePayment(key)}
     saveDayRows(g.key,rows);
   }catch(e){alert('Hata: '+e.message)}
@@ -290,13 +291,16 @@ function toggleMissed(el){
 function saveRow(el){
   var g=getRow(el);if(!g)return;
   var rows=getDayData(g.key);if(!rows[g.idx])return;
-  rows[g.idx].name=g.row.querySelector('.row-name').value;
+  var row=rows[g.idx];
+  row.name=g.row.querySelector('.row-name').value;
   var ts=g.row.querySelector('.row-time-start'),te=g.row.querySelector('.row-time-end');
   var t1=ts?ts.value:'',t2=te?te.value:'';
-  rows[g.idx].time=(t1||t2)?t1+'-'+t2:'';
-  var sel=g.row.querySelector('select');if(sel)rows[g.idx].type=sel.value;
+  row.time=(t1||t2)?t1+'-'+t2:'';
+  var sel=g.row.querySelector('select');if(sel)row.type=sel.value;
+  var am=g.row.querySelector('.row-amount');var av=am?parseFloat(am.value):null;
+  row.amount=av>0?av:null;
   saveDayRows(g.key,rows);
-  if(rows[g.idx].done){var r=rows[g.idx].rate>0?rows[g.idx].rate:getDefaultRate(rows[g.idx].type||'bireysel');var h=lessonHours(rows[g.idx].type||'bireysel',rows[g.idx].time||'');updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*r,rows[g.idx].type)}
+  if(row.done)updatePaymentAmount(g.key+'-'+g.idx,row.name,row.time,getRowAmount(row),row.type);
 }
 
 /* ---------- COPY WEEK ---------- */
@@ -316,7 +320,7 @@ function copyWeekForward(){
     srcKey=getDayKey(weekOffset,i);dstKey=getDayKey(weekOffset+1,i);
     srcRows=data[srcKey];
     if(srcRows&&srcRows.length){
-      var copy=srcRows.map(function(r){return{name:r.name,time:r.time,rate:r.rate,type:r.type||'bireysel',done:false,missed:false}});
+      var copy=srcRows.map(function(r){return{name:r.name,time:r.time,amount:r.amount,type:r.type||'bireysel',done:false,missed:false}});
       data[dstKey]=copy;
     }
   }
@@ -331,6 +335,11 @@ function saveDayRows(k,r){try{var a=JSON.parse(localStorage.getItem(progKey())||
 function getDefaultRate(type){
   var v=parseFloat(localStorage.getItem(type==='onlineBireysel'?rateKeyOB():type==='onlineGrup'?rateKeyOG():type==='grup'?rateKeyG():rateKeyB()));
   return v>0?v:(type==='onlineBireysel'?2200:type==='onlineGrup'?1125:type==='grup'?300:500);
+}
+function getRowAmount(row){
+  if(row&&row.amount>0)return row.amount;
+  var t=row&&row.type?row.type:'bireysel';
+  return lessonHours(t,row&&row.time?row.time:'')*getDefaultRate(t);
 }
 function typeLabel(t){return t==='onlineBireysel'?'OB':t==='onlineGrup'?'OG':t==='grup'?'G':'B'}
 
@@ -707,7 +716,7 @@ document.getElementById('default-rate-online-grup').value=getDefaultRate('online
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=28',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=29',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
