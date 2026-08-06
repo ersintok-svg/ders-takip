@@ -71,7 +71,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 .cal-row .row-time:focus{background:#f0f0ff;border-radius:4px}
 .cal-row .row-amount{width:74px;border:none;outline:none;font-size:.8rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--text);text-align:right;flex-shrink:0}
 .cal-row .row-amount:focus{background:#f0f0ff;border-radius:4px}
-.cal-row.done .row-name,.cal-row.done .row-time,.cal-row.done .row-amount{text-decoration:line-through;color:#bbb}
+.cal-row.done{opacity:.45}
 .cal-row.missed{background:#fef2f2}
 .cal-row.missed .row-name{color:#dc2626;font-weight:600}
 .missed-btn{padding:3px 8px;font-size:.7rem;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--muted);cursor:pointer;flex-shrink:0;transition:.2s}
@@ -154,7 +154,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-13';
+var APP_VERSION='2026-08-06-14';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -694,7 +694,7 @@ document.getElementById('default-rate-online-grup').value=getDefaultRate('online
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=31',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=32',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
