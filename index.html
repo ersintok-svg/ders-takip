@@ -122,11 +122,12 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
     <input id="default-rate-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyG(),this.value);pushSettings()">
     <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
     <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Online Bireysel:</span>
-    <input id="default-rate-online-bireysel" type="number" value="500" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyOB(),this.value);pushSettings()">
-    <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
+    <input id="default-rate-online-bireysel" type="number" value="2200" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyOB(),this.value);pushSettings()">
+    <span style="font-size:.8rem;color:var(--muted)">TL/1.5 saat</span>
     <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Online Grup:</span>
-    <input id="default-rate-online-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyOG(),this.value);pushSettings()">
-    <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
+    <input id="default-rate-online-grup" type="number" value="1125" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyOG(),this.value);pushSettings()">
+    <span style="font-size:.8rem;color:var(--muted)">TL/1.5 saat</span>
+    <span style="font-size:.75rem;color:var(--muted);flex-basis:100%">Online ders ücreti = 1.5 saatlik dersin toplam tutarı (Bireysel 2200, Grup 1125). Yüzyüze dersler saat başına hesaplanır.</span>
   </div>
   <div class="toolbar" style="margin-top:8px">
     <button class="btn btn-outline btn-sm" onclick="exportBackup()">&#128190; Yedek Al</button>
@@ -163,7 +164,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-9';
+var APP_VERSION='2026-08-06-10';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -329,7 +330,7 @@ function getDayData(k){try{var a=JSON.parse(localStorage.getItem(progKey())||'{}
 function saveDayRows(k,r){try{var a=JSON.parse(localStorage.getItem(progKey())||'{}');a[k]=r;localStorage.setItem(progKey(),JSON.stringify(a));pushProgram()}catch(e){}}
 function getDefaultRate(type){
   var v=parseFloat(localStorage.getItem(type==='onlineBireysel'?rateKeyOB():type==='onlineGrup'?rateKeyOG():type==='grup'?rateKeyG():rateKeyB()));
-  return v>0?v:(type==='onlineBireysel'?500:type==='onlineGrup'?300:type==='grup'?300:500);
+  return v>0?v:(type==='onlineBireysel'?2200:type==='onlineGrup'?1125:type==='grup'?300:500);
 }
 function typeLabel(t){return t==='onlineBireysel'?'OB':t==='onlineGrup'?'OG':t==='grup'?'G':'B'}
 
@@ -372,7 +373,7 @@ function calcHours(t){
 }
 var ONLINE_HOURS=1.5;
 function lessonHours(type,time){
-  if(type==='onlineBireysel'||type==='onlineGrup')return ONLINE_HOURS;
+  if(type==='onlineBireysel'||type==='onlineGrup')return 1;
   return calcHours(time)||1;
 }
 function normalizeTime(v){
@@ -706,7 +707,7 @@ document.getElementById('default-rate-online-grup').value=getDefaultRate('online
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=27',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=28',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
