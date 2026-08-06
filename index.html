@@ -154,7 +154,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-14';
+var APP_VERSION='2026-08-06-15';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -321,6 +321,88 @@ function getRowAmount(row){
   return lessonHours(t,row&&row.time?row.time:'')*getDefaultRate(t);
 }
 
+/* ---------- WEEK SHIFT ---------- */
+function monday(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-x.getDay()+1);return x}
+function parseISO(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])}
+function mondayStr(){var x=monday(new Date());return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')}
+function weekShift(oldM,curM){return Math.round((curM-oldM)/604800000)}
+function shiftWeeks(delta){
+  var data={};try{data=JSON.parse(localStorage.getItem(progKey())||'{}')}catch(e){}
+  var nd={};
+  Object.keys(data).forEach(function(k){
+    var m=k.match(/^wk(-?\d+)d(\d)$/);
+    if(!m||!Array.isArray(data[k])){nd[k]=data[k];return}
+    nd['wk'+(parseInt(m[1])+delta)+'d'+m[2]]=data[k];
+  });
+  var pay={};try{pay=JSON.parse(localStorage.getItem(payKey())||'{}')}catch(e){}
+  var np={};
+  Object.keys(pay).forEach(function(k){
+    var m=k.match(/^wk(-?\d+)d(\d)-(\d+)$/);
+    if(!m){np[k]=pay[k];return}
+    var nk='wk'+(parseInt(m[1])+delta)+'d'+m[2]+'-'+m[3];
+    var rec=pay[k];rec.dayKey='wk'+(parseInt(m[1])+delta)+'d'+m[2];
+    np[nk]=rec;
+  });
+  localStorage.setItem(progKey(),JSON.stringify(nd));
+  localStorage.setItem(payKey(),JSON.stringify(np));
+}
+function checkWeekShift(){
+  var data={};try{data=JSON.parse(localStorage.getItem(progKey())||'{}')}catch(e){}
+  var curM=monday(new Date());
+  if(!data._ref){data._ref=mondayStr();localStorage.setItem(progKey(),JSON.stringify(data));return}
+  var diff=weekShift(parseISO(data._ref),curM);
+  if(diff===0)return;
+  shiftWeeks(-diff);
+  var d2={};try{d2=JSON.parse(localStorage.getItem(progKey())||'{}')}catch(e){}
+  d2._ref=mondayStr();localStorage.setItem(progKey(),JSON.stringify(d2));
+  pushProgram();pushPayments();
+}
+function migrateStale(){
+  var data={},pay={};
+  try{data=JSON.parse(localStorage.getItem(progKey())||'{}')}catch(e){}
+  try{pay=JSON.parse(localStorage.getItem(payKey())||'{}')}catch(e){}
+  var curM=monday(new Date()),changed=false;
+  var payNew={};
+  Object.keys(pay).forEach(function(k){
+    var rec=pay[k],newKey=k;
+    var m=k.match(/^wk(-?\d+)d(\d)-(\d+)$/);
+    if(rec&&rec.date&&m){
+      var diff=weekShift(monday(parseISO(rec.date)),curM);
+      if(diff!==parseInt(m[1])){
+        newKey='wk'+(-diff)+'d'+m[2]+'-'+m[3];
+        rec.dayKey='wk'+(-diff)+'d'+m[2];changed=true;
+      }
+    }
+    payNew[newKey]=rec;
+  });
+  var progNew={};
+  Object.keys(data).forEach(function(k){
+    var m=k.match(/^wk(-?\d+)d(\d)$/);
+    if(!m||!Array.isArray(data[k])){progNew[k]=data[k];return}
+    var rows=data[k];
+    rows.forEach(function(r,ri){
+      if(r&&r.done){
+        var pm=pay[k+'-'+ri];
+        if(pm&&pm.date){
+          var diff=weekShift(monday(parseISO(pm.date)),curM);
+          if(diff!==parseInt(m[1])){
+            var dk='wk'+(-diff)+'d'+m[2];
+            if(!progNew[dk])progNew[dk]=[];
+            progNew[dk][ri]=r;changed=true;return;
+          }
+        }
+      }
+      if(!progNew[k])progNew[k]=[];
+      progNew[k][ri]=r;
+    });
+  });
+  if(changed){
+    localStorage.setItem(progKey(),JSON.stringify(progNew));
+    localStorage.setItem(payKey(),JSON.stringify(payNew));
+    pushProgram();pushPayments();
+  }
+}
+
 /* ---------- FIREBASE SYNC ---------- */
 var fbConfig={apiKey:"AIzaSyA8B_4CRLVHj-XM7cE8uyuYxfNNk1Rqyyc",authDomain:"ders-takip-dfeb9.firebaseapp.com",projectId:"ders-takip-dfeb9",storageBucket:"ders-takip-dfeb9.firebasestorage.app",messagingSenderId:"34397564695",appId:"1:34397564695:web:3490d4f0a340b5507f5152",measurementId:"G-TSJMNHFC7T"};
 var db=null,ppTimer=null,psTimer=null,psetTimer=null,authReady=null;
@@ -346,7 +428,7 @@ function loadRemote(){
       if(prog){localStorage.setItem(progKey(),JSON.stringify(prog));changed=true}
       if(pay){localStorage.setItem(payKey(),JSON.stringify(pay));changed=true}
       if(set){if(set.bireysel)localStorage.setItem(rateKeyB(),set.bireysel);if(set.grup)localStorage.setItem(rateKeyG(),set.grup);if(set.onlineBireysel)localStorage.setItem(rateKeyOB(),set.onlineBireysel);if(set.onlineGrup)localStorage.setItem(rateKeyOG(),set.onlineGrup)}
-      if(changed)location.reload();
+      if(changed){migrateStale();checkWeekShift();location.reload();}
     });
   }).catch(function(){});
 }
@@ -621,7 +703,7 @@ function auditData(){
   var data;
   try{data=JSON.parse(localStorage.getItem(progKey())||'{}')}catch(e){data={}}
   var pay=getPayments(),payKeys=Object.keys(pay);
-  var dayKeys=Object.keys(data);
+  var dayKeys=Object.keys(data).filter(function(k){return /^wk-?\d+d\d$/.test(k)});
   dayKeys.forEach(function(dk){
     var rows=data[dk]||[];
     rows.forEach(function(r,ri){
@@ -688,13 +770,12 @@ renderProfileBar();
 paymentMonth='';
 renderMonthOptions();
 document.getElementById('default-rate-bireysel').value=getDefaultRate('bireysel');
-document.getElementById('default-rate-grup').value=getDefaultRate('grup');
-document.getElementById('default-rate-online-bireysel').value=getDefaultRate('onlineBireysel');
-document.getElementById('default-rate-online-grup').value=getDefaultRate('onlineGrup');
+migrateStale();
+checkWeekShift();
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=32',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=33',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
