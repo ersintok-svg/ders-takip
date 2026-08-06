@@ -100,6 +100,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
   <div class="toolbar" style="margin-top:8px">
     <button class="btn btn-outline btn-sm" onclick="exportBackup()">&#128190; Yedek Al</button>
     <button class="btn btn-outline btn-sm" onclick="showRestoreModal()">&#128214; Geri Yükle</button>
+    <button class="btn btn-outline btn-sm" onclick="auditData()">&#128269; Denetle</button>
   </div>
   <div class="calendar-wrap">
     <div class="cal-grid" id="cal-grid"></div>
@@ -122,7 +123,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-1';
+var APP_VERSION='2026-08-06-2';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -231,9 +232,18 @@ function saveRow(el){
 function copyWeekForward(){
   var data;
   try{data=JSON.parse(localStorage.getItem(progKey())||'{}')}catch(e){return}
-  for(var i=0;i<7;i++){
-    var srcKey=getDayKey(weekOffset,i),dstKey=getDayKey(weekOffset+1,i);
-    var srcRows=data[srcKey];
+  var i,srcKey,dstKey,srcRows,dstRows,hasSrc=false,hasDst=false;
+  for(i=0;i<7;i++){
+    srcKey=getDayKey(weekOffset,i);dstKey=getDayKey(weekOffset+1,i);
+    srcRows=data[srcKey];dstRows=data[dstKey];
+    if(srcRows&&srcRows.length){for(var j=0;j<srcRows.length;j++)if(srcRows[j]&&(srcRows[j].name||srcRows[j].time)){hasSrc=true;break}}
+    if(dstRows&&dstRows.length){for(var k=0;k<dstRows.length;k++)if(dstRows[k]&&(dstRows[k].name||dstRows[k].time)){hasDst=true;break}}
+  }
+  if(!hasSrc)return;
+  if(hasDst&&!confirm('Hedef haftada dersler var. Kopyalama üzerine yazacak. Devam edilsin mi?'))return;
+  for(i=0;i<7;i++){
+    srcKey=getDayKey(weekOffset,i);dstKey=getDayKey(weekOffset+1,i);
+    srcRows=data[srcKey];
     if(srcRows&&srcRows.length){
       var copy=srcRows.map(function(r){return{name:r.name,time:r.time,rate:r.rate,type:r.type||'bireysel',done:false}});
       data[dstKey]=copy;
@@ -310,7 +320,19 @@ function addPayment(key,name,dayKey,time,amount){
   savePayments(p);
 }
 function removePayment(key){var p=getPayments();delete p[key];savePayments(p)}
-function deletePayment(key){removePayment(key);renderPayments()}
+function deletePayment(key){
+  removePayment(key);
+  var m=key.match(/^(wk-?\d+d\d)-(\d+)$/);
+  if(m){
+    try{
+      var data=JSON.parse(localStorage.getItem(progKey())||'{}');
+      var rows=data[m[1]],idx=parseInt(m[2]);
+      if(rows&&rows[idx]){rows[idx].done=false;localStorage.setItem(progKey(),JSON.stringify(data));pushProgram()}
+    }catch(e){}
+  }
+  renderPayments();
+  renderSchedule();
+}
 function updatePaymentAmount(key,name,time,amount){
   var p=getPayments();
   if(p[key]){p[key].name=name;p[key].time=time;p[key].amount=amount;if(!p[key].date)p[key].date=getDateFromDayKey(p[key].dayKey)}
@@ -380,6 +402,7 @@ function printSelected(){
 }
 function printPayments(selectedNames){
   var p=getPayments(),keys=Object.keys(p);
+  if(paymentMonth) keys=keys.filter(function(k){return p[k].date&&p[k].date.slice(0,7)===paymentMonth});
   if(!keys.length){alert('Yazdırılacak ödeme kaydı yok.');return}
   var groups={};
   keys.forEach(function(k){
@@ -404,8 +427,10 @@ function printPayments(selectedNames){
     allHtml+='<tr style="font-weight:700"><td colspan="4" style="padding:8px 10px;border-top:2px solid #000">Kalan</td><td style="padding:8px 10px;text-align:right;border-top:2px solid #000">'+bal.toFixed(0)+' TL</td></tr>';
     allHtml+='</tbody></table></div>';
   });
+  var periodLabel;
+  if(paymentMonth){var pp=paymentMonth.split('-');periodLabel=new Date(+pp[0],+pp[1]-1,1).toLocaleDateString('tr-TR',{month:'long',year:'numeric'})}else{periodLabel='Tüm dönem'}
   var win=window.open('','_blank');
-  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Yapılan Ders Listesi</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px;color:#1e293b}@media print{body{padding:0}nav{display:none!important}}nav{text-align:right;margin-bottom:16px}nav button{padding:8px 20px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.9rem}nav button:hover{background:#f5f5f5}h1{font-size:1.3rem;margin-bottom:4px}</style></head><body><nav><button onclick="window.print()">&#x1F5A8; PDF Olarak Kaydet</button> <button onclick="window.close()">&#x2716; Kapat</button></nav><h1>&#x1F393; Yapılan Ders Listesi</h1><p style="color:#666;margin-bottom:20px">Dönem: '+new Date().toLocaleDateString('tr-TR',{month:'long',year:'numeric'})+'</p>'+allHtml+'</body></html>');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Yapılan Ders Listesi</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px;color:#1e293b}@media print{body{padding:0}nav{display:none!important}}nav{text-align:right;margin-bottom:16px}nav button{padding:8px 20px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.9rem}nav button:hover{background:#f5f5f5}h1{font-size:1.3rem;margin-bottom:4px}</style></head><body><nav><button onclick="window.print()">&#x1F5A8; PDF Olarak Kaydet</button> <button onclick="window.close()">&#x2716; Kapat</button></nav><h1>&#x1F393; Yapılan Ders Listesi</h1><p style="color:#666;margin-bottom:20px">Dönem: '+periodLabel+'</p>'+allHtml+'</body></html>');
   win.document.close();
   setTimeout(function(){win.print()},500);
 }
@@ -468,6 +493,35 @@ function importBackup(input){
   reader.readAsText(f);
 }
 
+function auditData(){
+  var lines=[];
+  var data;
+  try{data=JSON.parse(localStorage.getItem(progKey())||'{}')}catch(e){data={}}
+  var pay=getPayments(),payKeys=Object.keys(pay);
+  var dayKeys=Object.keys(data);
+  dayKeys.forEach(function(dk){
+    var rows=data[dk]||[];
+    rows.forEach(function(r,ri){
+      if(r&&r.done){
+        var key=dk+'-'+ri;
+        lines.push((r.name||'İsimsiz')+'  ['+dk+' '+ (r.time||'-')+']  => işaretli'+(pay[key]?'  (ödeme var)':'  (!!! ödeme YOK)'));
+      }
+    });
+  });
+  payKeys.forEach(function(k){
+    var m=k.match(/^(wk-?\d+d\d)-(\d+)$/);
+    if(m){
+      var rows=data[m[1]],r=rows&&rows[parseInt(m[2])];
+      if(!r)lines.push('!!! Ödeme var ama programda satır YOK: '+k+'  ('+(pay[k].name||'')+')');
+    }
+  });
+  var msg=lines.length?lines.join('\n'):'İşaretli satır bulunamadı. Veri tutarlı görünüyor.';
+  var m=document.createElement('div');
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px';
+  m.innerHTML='<div style="background:#fff;border-radius:12px;max-width:600px;width:100%;padding:16px;box-sizing:border-box"><h3 style="margin-bottom:8px">Veri Denetimi</h3><p style="font-size:.8rem;color:#64748b;margin-bottom:8px">İşaretli satırlar ve program-ödeme eşleşmeleri:</p><div style="max-height:300px;overflow:auto;white-space:pre-wrap;font-family:monospace;font-size:.75rem;border:1px solid #e2e8f0;border-radius:8px;padding:8px;box-sizing:border-box">'+esc(msg)+'</div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-outline btn-sm" onclick="this.parentElement.parentElement.parentElement.remove()">Kapat</button></div></div>';
+  document.body.appendChild(m);
+}
+
 function checkBackup(){
   var last=localStorage.getItem('dersLastBackup');if(!last)return;
   var days=Math.floor((Date.now()-new Date(last).getTime())/86400000);
@@ -512,7 +566,7 @@ document.getElementById('default-rate-grup').value=getDefaultRate('grup');
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=19',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=20',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
