@@ -96,11 +96,20 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
     <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Grup:</span>
     <input id="default-rate-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyG(),this.value);pushSettings()">
     <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
+    <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Online Bireysel:</span>
+    <input id="default-rate-online-bireysel" type="number" value="500" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyOB(),this.value);pushSettings()">
+    <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
+    <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Online Grup:</span>
+    <input id="default-rate-online-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyOG(),this.value);pushSettings()">
+    <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
   </div>
   <div class="toolbar" style="margin-top:8px">
     <button class="btn btn-outline btn-sm" onclick="exportBackup()">&#128190; Yedek Al</button>
     <button class="btn btn-outline btn-sm" onclick="showRestoreModal()">&#128214; Geri Yükle</button>
     <button class="btn btn-outline btn-sm" onclick="auditData()">&#128269; Denetle</button>
+  </div>
+  <div class="toolbar" style="margin-top:8px">
+    <span style="font-size:.75rem;color:var(--muted)"><strong>B</strong>=Bireysel &nbsp; <strong>G</strong>=Grup &nbsp; <strong>OB</strong>=Online Bireysel &nbsp; <strong>OG</strong>=Online Grup</span>
   </div>
   <div class="calendar-wrap">
     <div class="cal-grid" id="cal-grid"></div>
@@ -123,7 +132,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-3';
+var APP_VERSION='2026-08-06-4';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -135,6 +144,8 @@ function progKey(){return'dersTakipProgram_'+profile}
 function payKey(){return'dersTakipOdeme_'+profile}
 function rateKeyB(){return'dersDefaultRateBireysel_'+profile}
 function rateKeyG(){return'dersDefaultRateGrup_'+profile}
+function rateKeyOB(){return'dersDefaultRateOnlineBireysel_'+profile}
+function rateKeyOG(){return'dersDefaultRateOnlineGrup_'+profile}
 
 /* ---------- TAB ---------- */
 document.querySelectorAll('.tab').forEach(function(t){
@@ -172,9 +183,11 @@ function renderRow(dk,idx,row){
   var ch=row.done?'checked':'',cls=row.done?' done':'',t=row.type||'bireysel';
   return '<div class="cal-row'+cls+'" data-key="'+dk+'" data-idx="'+idx+'">'+
     '<input type="checkbox" '+ch+' onchange="toggleRow(this)">'+
-    '<select onchange="changeType(this)" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
+    '<select onchange="changeType(this)" title="B=Bireysel · G=Grup · OB=Online Bireysel · OG=Online Grup" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
     '<option value="bireysel"'+(t==='bireysel'?' selected':'')+'>B</option>'+
-    '<option value="grup"'+(t==='grup'?' selected':'')+'>G</option></select>'+
+    '<option value="grup"'+(t==='grup'?' selected':'')+'>G</option>'+
+    '<option value="onlineBireysel"'+(t==='onlineBireysel'?' selected':'')+'>OB</option>'+
+    '<option value="onlineGrup"'+(t==='onlineGrup'?' selected':'')+'>OG</option></select>'+
     '<input class="row-name" value="'+esc(row.name||'')+'" placeholder="Öğrenci adı" oninput="saveRow(this)">'+
     '<input class="row-time" value="'+esc(row.time||'')+'" placeholder="17.00-19.00" oninput="saveRow(this)">'+
     '<button onclick="deleteRow(this)" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1;flex-shrink:0">x</button></div>';
@@ -187,7 +200,7 @@ function changeType(el){
   rows[g.idx].type=el.value;
   rows[g.idx].rate=getDefaultRate(el.value);
   saveDayRows(g.key,rows);
-  if(rows[g.idx].done){var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*rows[g.idx].rate)}
+  if(rows[g.idx].done){var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*rows[g.idx].rate,rows[g.idx].type)}
 }
 function addRow(dk){
   var rows=getDayData(dk);rows.push({name:'',time:'',done:false,type:'bireysel',rate:getDefaultRate('bireysel')});
@@ -209,11 +222,11 @@ function toggleRow(cb){
     var rows=getDayData(g.key);if(!rows[g.idx])return;
     rows[g.idx].done=cb.checked;
     g.row.classList.toggle('done',cb.checked);
-    var key=g.key+'-'+g.idx;
+      var key=g.key+'-'+g.idx;
     if(cb.checked){
       var r=rows[g.idx],name=r.name||'İsimsiz',time=r.time||'',t=r.type||'bireysel',rate=r.rate>0?r.rate:getDefaultRate(t);
       var hours=calcHours(time)||1,amt=hours*rate;
-      addPayment(key,name,g.key,time,amt);
+      addPayment(key,name,g.key,time,amt,t);
     }else{removePayment(key)}
     saveDayRows(g.key,rows);
   }catch(e){alert('Hata: '+e.message)}
@@ -225,7 +238,7 @@ function saveRow(el){
   rows[g.idx].time=g.row.querySelector('.row-time').value;
   var sel=g.row.querySelector('select');if(sel)rows[g.idx].type=sel.value;
   saveDayRows(g.key,rows);
-  if(rows[g.idx].done){var r=rows[g.idx].rate>0?rows[g.idx].rate:getDefaultRate(rows[g.idx].type||'bireysel');var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*r)}
+  if(rows[g.idx].done){var r=rows[g.idx].rate>0?rows[g.idx].rate:getDefaultRate(rows[g.idx].type||'bireysel');var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*r,rows[g.idx].type)}
 }
 
 /* ---------- COPY WEEK ---------- */
@@ -257,7 +270,11 @@ function copyWeekForward(){
 function getDayKey(w,d){return'wk'+w+'d'+d}
 function getDayData(k){try{var a=JSON.parse(localStorage.getItem(progKey())||'{}');return a[k]||[]}catch(e){return[]}}
 function saveDayRows(k,r){try{var a=JSON.parse(localStorage.getItem(progKey())||'{}');a[k]=r;localStorage.setItem(progKey(),JSON.stringify(a));pushProgram()}catch(e){}}
-function getDefaultRate(type){var v=parseFloat(localStorage.getItem(type==='grup'?rateKeyG():rateKeyB()));return v>0?v:(type==='grup'?300:500)}
+function getDefaultRate(type){
+  var v=parseFloat(localStorage.getItem(type==='onlineBireysel'?rateKeyOB():type==='onlineGrup'?rateKeyOG():type==='grup'?rateKeyG():rateKeyB()));
+  return v>0?v:(type==='onlineBireysel'?500:type==='onlineGrup'?300:type==='grup'?300:500);
+}
+function typeLabel(t){return t==='onlineBireysel'?'OB':t==='onlineGrup'?'OG':t==='grup'?'G':'B'}
 
 /* ---------- FIREBASE SYNC ---------- */
 var fbConfig={apiKey:"AIzaSyA8B_4CRLVHj-XM7cE8uyuYxfNNk1Rqyyc",authDomain:"ders-takip-dfeb9.firebaseapp.com",projectId:"ders-takip-dfeb9",storageBucket:"ders-takip-dfeb9.firebasestorage.app",messagingSenderId:"34397564695",appId:"1:34397564695:web:3490d4f0a340b5507f5152",measurementId:"G-TSJMNHFC7T"};
@@ -269,7 +286,7 @@ function getRaw(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(
 function fts(){return firebase.firestore.FieldValue.serverTimestamp()}
 function pushProgram(){if(!db)return;clearTimeout(ppTimer);ppTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('program_'+profile).set({data:getRaw(progKey()),t:fts()})}).catch(function(){})},600)}
 function pushPayments(){if(!db)return;clearTimeout(psTimer);psTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('payments_'+profile).set({data:getRaw(payKey()),t:fts()})}).catch(function(){})},600)}
-function pushSettings(){if(!db)return;clearTimeout(psetTimer);psetTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('settings_'+profile).set({data:{bireysel:localStorage.getItem(rateKeyB()),grup:localStorage.getItem(rateKeyG())},t:fts()})}).catch(function(){})},600)}
+function pushSettings(){if(!db)return;clearTimeout(psetTimer);psetTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('settings_'+profile).set({data:{bireysel:localStorage.getItem(rateKeyB()),grup:localStorage.getItem(rateKeyG()),onlineBireysel:localStorage.getItem(rateKeyOB()),onlineGrup:localStorage.getItem(rateKeyOG())},t:fts()})}).catch(function(){})},600)}
 function loadRemote(){
   if(!db)return;
   whenReady().then(function(){
@@ -283,7 +300,7 @@ function loadRemote(){
       });
       if(prog){localStorage.setItem(progKey(),JSON.stringify(prog));changed=true}
       if(pay){localStorage.setItem(payKey(),JSON.stringify(pay));changed=true}
-      if(set){if(set.bireysel)localStorage.setItem(rateKeyB(),set.bireysel);if(set.grup)localStorage.setItem(rateKeyG(),set.grup)}
+      if(set){if(set.bireysel)localStorage.setItem(rateKeyB(),set.bireysel);if(set.grup)localStorage.setItem(rateKeyG(),set.grup);if(set.onlineBireysel)localStorage.setItem(rateKeyOB(),set.onlineBireysel);if(set.onlineGrup)localStorage.setItem(rateKeyOG(),set.onlineGrup)}
       if(changed)location.reload();
     });
   }).catch(function(){});
@@ -314,9 +331,9 @@ function formatDate(iso){
   var days=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
   return days[d.getDay()]+' '+d.getDate()+' '+['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'][d.getMonth()]+' '+d.getFullYear();
 }
-function addPayment(key,name,dayKey,time,amount){
+function addPayment(key,name,dayKey,time,amount,type){
   var p=getPayments();
-  p[key]={name:name,dayKey:dayKey,time:time,amount:amount,paid:false,date:getDateFromDayKey(dayKey)};
+  p[key]={name:name,dayKey:dayKey,time:time,amount:amount,paid:false,date:getDateFromDayKey(dayKey),type:type};
   savePayments(p);
 }
 function removePayment(key){var p=getPayments();delete p[key];savePayments(p)}
@@ -333,9 +350,9 @@ function deletePayment(key){
   renderPayments();
   renderSchedule();
 }
-function updatePaymentAmount(key,name,time,amount){
+function updatePaymentAmount(key,name,time,amount,type){
   var p=getPayments();
-  if(p[key]){p[key].name=name;p[key].time=time;p[key].amount=amount;if(!p[key].date)p[key].date=getDateFromDayKey(p[key].dayKey)}
+  if(p[key]){p[key].name=name;p[key].time=time;p[key].amount=amount;p[key].type=type;if(!p[key].date)p[key].date=getDateFromDayKey(p[key].dayKey)}
   savePayments(p);
 }
 function togglePaid(key,cb){
@@ -396,13 +413,13 @@ function renderPayments(){
   names.forEach(function(n){
     var g=groups[n],bal=g.total-g.paid;
     html+='<div class="student-card"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1"><input class="student-select" type="checkbox" data-name="'+esc(n)+'" style="width:18px;height:18px;accent-color:var(--primary)"> '+esc(n)+'</label>'+(bal>0?'<button class="btn btn-outline btn-sm" onclick="payAll(\''+esc(n)+'\')" style="flex-shrink:0">Tümünü Ödendi Yap</button>':'<span style="color:#059669;font-weight:700;font-size:.85rem;flex-shrink:0">&#10003; Tümü ödendi</span>')+'</h3><div class="summary">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; <span style="color:var(--ok,green)">Ödenen: '+g.paid.toFixed(0)+' TL</span>'+(bal>0?' &nbsp;·&nbsp; <span style="color:#dc2626">Kalan: '+bal.toFixed(0)+' TL</span>':'')+'</div>';
-    html+='<table><thead><tr><th>Ödendi</th><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th><th></th></tr></thead><tbody>';
+    html+='<table><thead><tr><th>Ödendi</th><th>Tür</th><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th><th></th></tr></thead><tbody>';
     g.lessons.forEach(function(l){
       var fd=formatDate(l.date),dd='';
       if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
-      html+='<tr><td><input type="checkbox" onchange="togglePaid(\''+esc(l.key)+'\',this)"'+(l.paid?' checked':'')+' style="width:18px;height:18px;accent-color:var(--primary)"></td><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar"><input type="number" value="'+l.amount.toFixed(0)+'" min="0" onchange="updateAmount(\''+esc(l.key)+'\',this)" style="width:72px;text-align:right;font-size:.85rem;font-weight:600;border:1px solid transparent;border-radius:6px;padding:2px 4px;outline:none;background:transparent;color:var(--text)" onfocus="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"><span style="font-size:.8rem">TL</span></td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
+      html+='<tr><td><input type="checkbox" onchange="togglePaid(\''+esc(l.key)+'\',this)"'+(l.paid?' checked':'')+' style="width:18px;height:18px;accent-color:var(--primary)"></td><td><span style="font-size:.75rem;font-weight:600;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 5px">'+esc(l.type?typeLabel(l.type):'-')+'</span></td><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar"><input type="number" value="'+l.amount.toFixed(0)+'" min="0" onchange="updateAmount(\''+esc(l.key)+'\',this)" style="width:72px;text-align:right;font-size:.85rem;font-weight:600;border:1px solid transparent;border-radius:6px;padding:2px 4px;outline:none;background:transparent;color:var(--text)" onfocus="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"><span style="font-size:.8rem">TL</span></td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
     });
-    html+='<tr class="toplam"><td colspan="5"><strong>Kalan</strong></td><td class="tutar"><strong>'+bal.toFixed(0)+' TL</strong></td></tr>';
+    html+='<tr class="toplam"><td colspan="6"><strong>Kalan</strong></td><td class="tutar"><strong>'+bal.toFixed(0)+' TL</strong></td></tr>';
     html+='</tbody></table></div>';
   });
   el.innerHTML=html;
@@ -423,7 +440,7 @@ function printPayments(selectedNames){
   var groups={};
   keys.forEach(function(k){
     var e=p[k];if(!groups[e.name])groups[e.name]={lessons:[],total:0,paid:0};
-    groups[e.name].lessons.push({dayKey:e.dayKey,time:e.time,amount:e.amount,paid:e.paid,date:e.date});
+    groups[e.name].lessons.push({dayKey:e.dayKey,time:e.time,amount:e.amount,paid:e.paid,date:e.date,type:e.type});
     groups[e.name].total+=e.amount;
     if(e.paid)groups[e.name].paid+=e.amount;
   });
@@ -434,13 +451,13 @@ function printPayments(selectedNames){
     allHtml+='<div style="page-break-inside:avoid;margin-bottom:30px;padding:20px;border:1px solid #ddd;border-radius:8px">';
     allHtml+='<h2 style="margin-bottom:4px">'+esc(n)+'</h2>';
     allHtml+='<p style="margin-bottom:12px;color:#666;font-size:.9rem">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; Ödenen: '+g.paid.toFixed(0)+' TL &nbsp;·&nbsp; <strong>Kalan: '+bal.toFixed(0)+' TL</strong></p>';
-    allHtml+='<table style="width:100%;border-collapse:collapse;font-size:.9rem"><thead><tr style="background:#f5f5f5"><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Ödendi</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Tarih</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Gün</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Saat</th><th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ddd">Tutar</th></tr></thead><tbody>';
+    allHtml+='<table style="width:100%;border-collapse:collapse;font-size:.9rem"><thead><tr style="background:#f5f5f5"><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Ödendi</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Tür</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Tarih</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Gün</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Saat</th><th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ddd">Tutar</th></tr></thead><tbody>';
     g.lessons.forEach(function(l){
       var fd=formatDate(l.date),dd='';
       if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
-      allHtml+='<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center"><input type="checkbox"'+(l.paid?' checked':'')+' disabled style="width:14px;height:14px"></td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(fd||'')+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(dd)+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(l.time||'-')+'</td><td style="padding:6px 10px;text-align:right;border-bottom:1px solid #eee">'+l.amount.toFixed(0)+' TL</td></tr>';
+      allHtml+='<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center"><input type="checkbox"'+(l.paid?' checked':'')+' disabled style="width:14px;height:14px"></td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(l.type?typeLabel(l.type):'-')+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(fd||'')+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(dd)+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(l.time||'-')+'</td><td style="padding:6px 10px;text-align:right;border-bottom:1px solid #eee">'+l.amount.toFixed(0)+' TL</td></tr>';
     });
-    allHtml+='<tr style="font-weight:700"><td colspan="4" style="padding:8px 10px;border-top:2px solid #000">Kalan</td><td style="padding:8px 10px;text-align:right;border-top:2px solid #000">'+bal.toFixed(0)+' TL</td></tr>';
+    allHtml+='<tr style="font-weight:700"><td colspan="5" style="padding:8px 10px;border-top:2px solid #000">Kalan</td><td style="padding:8px 10px;text-align:right;border-top:2px solid #000">'+bal.toFixed(0)+' TL</td></tr>';
     allHtml+='</tbody></table></div>';
   });
   var periodLabel;
@@ -579,10 +596,12 @@ paymentMonth='';
 renderMonthOptions();
 document.getElementById('default-rate-bireysel').value=getDefaultRate('bireysel');
 document.getElementById('default-rate-grup').value=getDefaultRate('grup');
+document.getElementById('default-rate-online-bireysel').value=getDefaultRate('onlineBireysel');
+document.getElementById('default-rate-online-grup').value=getDefaultRate('onlineGrup');
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=21',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=22',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
