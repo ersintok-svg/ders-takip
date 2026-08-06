@@ -46,7 +46,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 .cal-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--primary)}
 .cal-row .row-name{flex:1;border:none;outline:none;font-size:.85rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--text);min-width:0}
 .cal-row .row-name:focus{background:#f0f0ff;border-radius:4px}
-.cal-row .row-time{width:110px;border:none;outline:none;font-size:.8rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--muted);text-align:right;flex-shrink:0}
+.cal-row .row-time{width:92px;border:none;outline:none;font-size:.8rem;padding:4px 6px;background:transparent;font-family:inherit;color:var(--muted);text-align:right;flex-shrink:0}
 .cal-row .row-time:focus{background:#f0f0ff;border-radius:4px}
 .cal-row.done .row-name,.cal-row.done .row-time{text-decoration:line-through;color:#bbb}
 .cal-add{display:block;width:100%;padding:8px;border:1px dashed var(--border);border-radius:6px;background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;text-align:center;transition:.2s}
@@ -138,7 +138,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-5';
+var APP_VERSION='2026-08-06-6';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -187,6 +187,7 @@ function renderSchedule(){
 
 function renderRow(dk,idx,row){
   var ch=row.done?'checked':'',cls=row.done?' done':'',t=row.type||'bireysel';
+  var tp=parseTimePair(row.time||'');
   return '<div class="cal-row'+cls+'" data-key="'+dk+'" data-idx="'+idx+'">'+
     '<input type="checkbox" '+ch+' onchange="toggleRow(this)">'+
     '<select onchange="changeType(this)" title="B=Bireysel · G=Grup · OB=Online Bireysel · OG=Online Grup" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
@@ -195,7 +196,9 @@ function renderRow(dk,idx,row){
     '<option value="onlineBireysel"'+(t==='onlineBireysel'?' selected':'')+'>OB</option>'+
     '<option value="onlineGrup"'+(t==='onlineGrup'?' selected':'')+'>OG</option></select>'+
     '<input class="row-name" value="'+esc(row.name||'')+'" placeholder="Öğrenci adı" oninput="saveRow(this)">'+
-    '<input class="row-time" value="'+esc(row.time||'')+'" placeholder="17.00-19.00" oninput="saveRow(this)">'+
+    '<input class="row-time row-time-start" type="time" value="'+tp[0]+'" title="Başlangıç saati" oninput="saveRow(this)">'+
+    '<span style="color:var(--muted);font-size:.85rem;flex-shrink:0">-</span>'+
+    '<input class="row-time row-time-end" type="time" value="'+tp[1]+'" title="Bitiş saati" oninput="saveRow(this)">'+
     '<button onclick="deleteRow(this)" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1;flex-shrink:0">x</button></div>';
 }
 
@@ -241,7 +244,9 @@ function saveRow(el){
   var g=getRow(el);if(!g)return;
   var rows=getDayData(g.key);if(!rows[g.idx])return;
   rows[g.idx].name=g.row.querySelector('.row-name').value;
-  rows[g.idx].time=g.row.querySelector('.row-time').value;
+  var ts=g.row.querySelector('.row-time-start'),te=g.row.querySelector('.row-time-end');
+  var t1=ts?ts.value:'',t2=te?te.value:'';
+  rows[g.idx].time=(t1||t2)?t1+'-'+t2:'';
   var sel=g.row.querySelector('select');if(sel)rows[g.idx].type=sel.value;
   saveDayRows(g.key,rows);
   if(rows[g.idx].done){var r=rows[g.idx].rate>0?rows[g.idx].rate:getDefaultRate(rows[g.idx].type||'bireysel');var h=calcHours(rows[g.idx].time||'')||1;updatePaymentAmount(g.key+'-'+g.idx,rows[g.idx].name,rows[g.idx].time,h*r,rows[g.idx].type)}
@@ -318,6 +323,19 @@ function calcHours(t){
   var s=p[0].trim().split(':').map(Number),e=p[1].trim().split(':').map(Number);
   if(s.length<2||e.length<2||isNaN(s[0])||isNaN(e[0]))return 0;
   var h=(e[0]*60+(e[1]||0)-s[0]*60-(s[1]||0))/60;return h>0?+h.toFixed(2):0;
+}
+function normalizeTime(v){
+  if(!v)return'';
+  var p=v.replace(/\./g,':').split(':');
+  var h=p[0]?p[0].trim():'',m=p[1]?p[1].trim():'';
+  if(!/^\d{1,2}$/.test(h))return'';
+  if(m&&!/^\d{1,2}$/.test(m))m='';
+  return('0'+(+h)).slice(-2)+':'+(m?('0'+(+m)).slice(-2):'00');
+}
+function parseTimePair(t){
+  if(!t)return['',''];
+  var p=t.split('-');
+  return[normalizeTime(p[0]),normalizeTime(p[1])];
 }
 
 /* ---------- PAYMENTS ---------- */
@@ -634,7 +652,7 @@ document.getElementById('default-rate-online-grup').value=getDefaultRate('online
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=23',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=24',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
