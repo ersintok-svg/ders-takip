@@ -95,7 +95,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 .empty-state{padding:60px 20px;text-align:center;color:var(--muted)}
 .empty-state p{margin-bottom:12px;font-size:1rem}
 @media print{body{background:#fff;padding:0}.tabs,.toolbar,.cal-add,.delete-row{display:none!important}.panel{display:block!important}.container{max-width:100%}.student-card{break-inside:avoid;box-shadow:none;border:1px solid #ddd;border-radius:4px}}
-@media(max-width:600px){body{padding:8px}.cal-row{flex-wrap:wrap;gap:3px;padding:6px 0}.cal-row .row-name{flex:1;min-width:80px;font-size:.9rem;padding:4px 2px}.cal-row .row-time{flex:1;min-width:80px;font-size:.85rem;padding:4px 2px}.cal-row .row-amount{flex:1;min-width:70px;font-size:.85rem;padding:4px 2px}.cal-row .row-type{font-size:.8rem!important;padding:2px 6px!important}.cal-boxes{padding:4px 6px}.cal-add{font-size:.75rem;padding:6px}.cal-day-header{padding:8px 10px;font-size:.85rem}.student-card table{font-size:.8rem}.student-card th,.student-card td{padding:6px}}
+@media(max-width:600px){body{padding:8px}.cal-row{flex-wrap:wrap;gap:3px;padding:6px 0}.cal-row .row-name{flex:1;min-width:80px;font-size:.9rem;padding:4px 2px}.cal-row .row-time{flex:1;min-width:80px;font-size:.85rem;padding:4px 2px}.cal-row .row-amount{flex:1;min-width:70px;font-size:.85rem;padding:4px 2px}.cal-boxes{padding:4px 6px}.cal-add{font-size:.75rem;padding:6px}.cal-day-header{padding:8px 10px;font-size:.85rem}.student-card table{font-size:.8rem}.student-card th,.student-card td{padding:6px}}
 </style>
 </head>
 <body>
@@ -117,19 +117,10 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
     <button class="btn btn-outline btn-sm" onclick="weekOffset=0;renderSchedule()">Bu Hafta</button>
   </div>
   <div class="toolbar" style="margin-top:8px">
-    <span style="font-size:.8rem;color:var(--muted)">Bireysel:</span>
+    <span style="font-size:.8rem;color:var(--muted)">Genel ders ücreti:</span>
     <input id="default-rate-bireysel" type="number" value="500" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyB(),this.value);pushSettings()">
     <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
-    <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Grup:</span>
-    <input id="default-rate-grup" type="number" value="300" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyG(),this.value);pushSettings()">
-    <span style="font-size:.8rem;color:var(--muted)">TL/saat</span>
-    <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Online Bireysel:</span>
-    <input id="default-rate-online-bireysel" type="number" value="2200" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyOB(),this.value);pushSettings()">
-    <span style="font-size:.8rem;color:var(--muted)">TL/1.5 saat</span>
-    <span style="font-size:.8rem;color:var(--muted);margin-left:8px">Online Grup:</span>
-    <input id="default-rate-online-grup" type="number" value="1125" min="0" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;outline:none" onchange="localStorage.setItem(rateKeyOG(),this.value);pushSettings()">
-    <span style="font-size:.8rem;color:var(--muted)">TL/1.5 saat</span>
-    <span style="font-size:.75rem;color:var(--muted);flex-basis:100%">Her dersin yanına saat ve ücreti yaz; sonraki haftalara aynen kopyalanır. Ücret boş kalırsa genel ücret uygulanır. Online ders ücreti = 1.5 saatlik dersin toplam tutarı (Bireysel 2200, Grup 1125). Yüzyüze dersler saat başına hesaplanır.</span>
+    <span style="font-size:.75rem;color:var(--muted);flex-basis:100%">Her dersin yanına saat ve ücreti yaz; sonraki haftalara aynen kopyalanır. Ücret boş kalırsa bu genel ücret (saat x TL) uygulanır.</span>
   </div>
   <div class="toolbar" style="margin-top:8px">
     <button class="btn btn-outline btn-sm" onclick="exportBackup()">&#128190; Yedek Al</button>
@@ -166,7 +157,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-11';
+var APP_VERSION='2026-08-06-12';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -214,15 +205,10 @@ function renderSchedule(){
 }
 
 function renderRow(dk,idx,row){
-  var ch=row.done?'checked':'',cls=row.done?' done':'',mcls=row.missed?' missed':'',t=row.type||'bireysel';
+  var ch=row.done?'checked':'',cls=row.done?' done':'',mcls=row.missed?' missed':'';
   var tp=parseTimePair(row.time||'');
   return '<div class="cal-row'+cls+mcls+'" data-key="'+dk+'" data-idx="'+idx+'">'+
     '<input type="checkbox" '+ch+' onchange="toggleRow(this)">'+
-    '<select onchange="changeType(this)" title="B=Bireysel · G=Grup · OB=Online Bireysel · OG=Online Grup" style="font-size:.7rem;padding:2px 2px;border:1px solid var(--border);border-radius:4px;outline:none;flex-shrink:0;background:transparent;color:var(--text)">'+
-    '<option value="bireysel"'+(t==='bireysel'?' selected':'')+'>B</option>'+
-    '<option value="grup"'+(t==='grup'?' selected':'')+'>G</option>'+
-    '<option value="onlineBireysel"'+(t==='onlineBireysel'?' selected':'')+'>OB</option>'+
-    '<option value="onlineGrup"'+(t==='onlineGrup'?' selected':'')+'>OG</option></select>'+
     '<input class="row-name" value="'+esc(row.name||'')+'" placeholder="Öğrenci adı" oninput="saveRow(this)">'+
     '<input class="row-time row-time-start" type="time" value="'+tp[0]+'" title="Başlangıç saati" oninput="saveRow(this)">'+
     '<span style="color:var(--muted);font-size:.85rem;flex-shrink:0">-</span>'+
@@ -233,13 +219,6 @@ function renderRow(dk,idx,row){
 }
 
 function getRow(el){var r=el.parentElement;while(r&&!r.dataset.key)r=r.parentElement;return r?{key:r.dataset.key,idx:parseInt(r.dataset.idx),row:r}:null}
-function changeType(el){
-  var g=getRow(el);if(!g)return;
-  var rows=getDayData(g.key);if(!rows[g.idx])return;
-  rows[g.idx].type=el.value;
-  saveDayRows(g.key,rows);
-  if(rows[g.idx].done){var row=rows[g.idx];updatePaymentAmount(g.key+'-'+g.idx,row.name,row.time,getRowAmount(row),row.type)}
-}
 function addRow(dk){
   var rows=getDayData(dk);rows.push({name:'',time:'',done:false,missed:false,type:'bireysel'});
   saveDayRows(dk,rows);
@@ -296,7 +275,9 @@ function saveRow(el){
   var ts=g.row.querySelector('.row-time-start'),te=g.row.querySelector('.row-time-end');
   var t1=ts?ts.value:'',t2=te?te.value:'';
   row.time=(t1||t2)?t1+'-'+t2:'';
-  var sel=g.row.querySelector('select');if(sel)row.type=sel.value;
+  var sel=g.row.querySelector('select');
+  if(sel)row.type=sel.value;
+  else if(!row.type)row.type='bireysel';
   var am=g.row.querySelector('.row-amount');var av=am?parseFloat(am.value):null;
   row.amount=av>0?av:null;
   saveDayRows(g.key,rows);
@@ -338,10 +319,10 @@ function getDefaultRate(type){
 }
 function getRowAmount(row){
   if(row&&row.amount>0)return row.amount;
+  if(row&&row.rate>0)return row.rate;
   var t=row&&row.type?row.type:'bireysel';
   return lessonHours(t,row&&row.time?row.time:'')*getDefaultRate(t);
 }
-function typeLabel(t){return t==='onlineBireysel'?'OB':t==='onlineGrup'?'OG':t==='grup'?'G':'B'}
 
 /* ---------- FIREBASE SYNC ---------- */
 var fbConfig={apiKey:"AIzaSyA8B_4CRLVHj-XM7cE8uyuYxfNNk1Rqyyc",authDomain:"ders-takip-dfeb9.firebaseapp.com",projectId:"ders-takip-dfeb9",storageBucket:"ders-takip-dfeb9.firebasestorage.app",messagingSenderId:"34397564695",appId:"1:34397564695:web:3490d4f0a340b5507f5152",measurementId:"G-TSJMNHFC7T"};
@@ -526,13 +507,13 @@ function renderStudentDetail(n){
   if(paymentMonth){var pp=paymentMonth.split('-');html+='<div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">Ay filtresi: <strong>'+new Date(+pp[0],+pp[1]-1,1).toLocaleDateString('tr-TR',{month:'long',year:'numeric'})+'</strong> <button class="btn btn-outline btn-sm" onclick="paymentMonth=\'\';renderMonthOptions();renderPayments()">Tüm Ayları Göster</button></div>';}
   if(bal>0)html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><strong style="font-size:1rem">&#128176; '+esc(n)+' için tahsil edilecek</strong><div style="font-size:.8rem;color:var(--muted)">(ödenmemiş dersler)</div></div><div style="font-size:1.4rem;font-weight:700;color:#dc2626">'+bal.toFixed(0)+' TL</div></div>';
   html+='<div class="student-card"><div class="summary">Toplam: '+total.toFixed(0)+' TL &nbsp;·&nbsp; <span style="color:var(--ok,green)">Ödenen: '+paid.toFixed(0)+' TL</span>'+(bal>0?' &nbsp;·&nbsp; <span style="color:#dc2626">Kalan: '+bal.toFixed(0)+' TL</span>':'')+'</div>';
-  html+='<table><thead><tr><th>Ödendi</th><th>Tür</th><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th><th></th></tr></thead><tbody>';
+  html+='<table><thead><tr><th>Ödendi</th><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th><th></th></tr></thead><tbody>';
   lessons.forEach(function(l){
     var fd=formatDate(l.date),dd='';
     if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
-    html+='<tr><td><input type="checkbox" onchange="togglePaid(\''+esc(l.key)+'\',this)"'+(l.paid?' checked':'')+' style="width:18px;height:18px;accent-color:var(--primary)"></td><td><span style="font-size:.75rem;font-weight:600;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 5px">'+esc(l.type?typeLabel(l.type):'-')+'</span></td><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar"><input type="number" value="'+l.amount.toFixed(0)+'" min="0" onchange="updateAmount(\''+esc(l.key)+'\',this)" style="width:72px;text-align:right;font-size:.85rem;font-weight:600;border:1px solid transparent;border-radius:6px;padding:2px 4px;outline:none;background:transparent;color:var(--text)" onfocus="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"><span style="font-size:.8rem">TL</span></td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
+    html+='<tr><td><input type="checkbox" onchange="togglePaid(\''+esc(l.key)+'\',this)"'+(l.paid?' checked':'')+' style="width:18px;height:18px;accent-color:var(--primary)"></td><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar"><input type="number" value="'+l.amount.toFixed(0)+'" min="0" onchange="updateAmount(\''+esc(l.key)+'\',this)" style="width:72px;text-align:right;font-size:.85rem;font-weight:600;border:1px solid transparent;border-radius:6px;padding:2px 4px;outline:none;background:transparent;color:var(--text)" onfocus="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"><span style="font-size:.8rem">TL</span></td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
   });
-  html+='<tr class="toplam"><td colspan="6"><strong>Kalan</strong></td><td class="tutar"><strong>'+bal.toFixed(0)+' TL</strong></td></tr>';
+  html+='<tr class="toplam"><td colspan="5"><strong>Kalan</strong></td><td class="tutar"><strong>'+bal.toFixed(0)+' TL</strong></td></tr>';
   html+='</tbody></table></div>';
   el.innerHTML=html;
 }
@@ -563,13 +544,13 @@ function printPayments(selectedNames){
     allHtml+='<div style="page-break-inside:avoid;margin-bottom:30px;padding:20px;border:1px solid #ddd;border-radius:8px">';
     allHtml+='<h2 style="margin-bottom:4px">'+esc(n)+'</h2>';
     allHtml+='<p style="margin-bottom:12px;color:#666;font-size:.9rem">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; Ödenen: '+g.paid.toFixed(0)+' TL &nbsp;·&nbsp; <strong>Kalan: '+bal.toFixed(0)+' TL</strong></p>';
-    allHtml+='<table style="width:100%;border-collapse:collapse;font-size:.9rem"><thead><tr style="background:#f5f5f5"><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Ödendi</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Tür</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Tarih</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Gün</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Saat</th><th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ddd">Tutar</th></tr></thead><tbody>';
+    allHtml+='<table style="width:100%;border-collapse:collapse;font-size:.9rem"><thead><tr style="background:#f5f5f5"><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Ödendi</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Tarih</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Gün</th><th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ddd">Saat</th><th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ddd">Tutar</th></tr></thead><tbody>';
     g.lessons.forEach(function(l){
       var fd=formatDate(l.date),dd='';
       if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
-      allHtml+='<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center"><input type="checkbox"'+(l.paid?' checked':'')+' disabled style="width:14px;height:14px"></td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(l.type?typeLabel(l.type):'-')+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(fd||'')+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(dd)+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(l.time||'-')+'</td><td style="padding:6px 10px;text-align:right;border-bottom:1px solid #eee">'+l.amount.toFixed(0)+' TL</td></tr>';
+      allHtml+='<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center"><input type="checkbox"'+(l.paid?' checked':'')+' disabled style="width:14px;height:14px"></td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(fd||'')+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(dd)+'</td><td style="padding:6px 10px;border-bottom:1px solid #eee">'+esc(l.time||'-')+'</td><td style="padding:6px 10px;text-align:right;border-bottom:1px solid #eee">'+l.amount.toFixed(0)+' TL</td></tr>';
     });
-    allHtml+='<tr style="font-weight:700"><td colspan="5" style="padding:8px 10px;border-top:2px solid #000">Kalan</td><td style="padding:8px 10px;text-align:right;border-top:2px solid #000">'+bal.toFixed(0)+' TL</td></tr>';
+    allHtml+='<tr style="font-weight:700"><td colspan="4" style="padding:8px 10px;border-top:2px solid #000">Kalan</td><td style="padding:8px 10px;text-align:right;border-top:2px solid #000">'+bal.toFixed(0)+' TL</td></tr>';
     allHtml+='</tbody></table></div>';
   });
   var periodLabel;
@@ -716,7 +697,7 @@ document.getElementById('default-rate-online-grup').value=getDefaultRate('online
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=29',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=30',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
