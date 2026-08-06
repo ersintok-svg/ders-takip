@@ -123,6 +123,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
     <span style="font-size:.75rem;color:var(--muted);flex-basis:100%">Her dersin yanına saat ve ücreti yaz; sonraki haftalara aynen kopyalanır. Ücret boş kalırsa bu genel ücret (saat x TL) uygulanır.</span>
   </div>
   <div class="toolbar" style="margin-top:8px">
+    <button class="btn btn-outline btn-sm" onclick="forcePull()">&#128260; Sunucudan Al</button>
     <button class="btn btn-outline btn-sm" onclick="exportBackup()">&#128190; Yedek Al</button>
     <button class="btn btn-outline btn-sm" onclick="showRestoreModal()">&#128214; Geri Yükle</button>
     <button class="btn btn-outline btn-sm" onclick="auditData()">&#128269; Denetle</button>
@@ -154,7 +155,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-15';
+var APP_VERSION='2026-08-06-16';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -414,23 +415,71 @@ function fts(){return firebase.firestore.FieldValue.serverTimestamp()}
 function pushProgram(){if(!db)return;clearTimeout(ppTimer);ppTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('program_'+profile).set({data:getRaw(progKey()),t:fts()})}).catch(function(){})},600)}
 function pushPayments(){if(!db)return;clearTimeout(psTimer);psTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('payments_'+profile).set({data:getRaw(payKey()),t:fts()})}).catch(function(){})},600)}
 function pushSettings(){if(!db)return;clearTimeout(psetTimer);psetTimer=setTimeout(function(){whenReady().then(function(){return db.collection('ders-takip').doc('settings_'+profile).set({data:{bireysel:localStorage.getItem(rateKeyB()),grup:localStorage.getItem(rateKeyG()),onlineBireysel:localStorage.getItem(rateKeyOB()),onlineGrup:localStorage.getItem(rateKeyOG())},t:fts()})}).catch(function(){})},600)}
+function tsMs(t){
+  if(!t)return 0;
+  if(typeof t.toMillis==='function')return t.toMillis();
+  if(typeof t.toDate==='function')return t.toDate().getTime();
+  if(t instanceof Date)return t.getTime();
+  if(typeof t==='string')return new Date(t).getTime();
+  if(typeof t==='number')return t;
+  return 0;
+}
+function syncKey(){return'dersLastSync_'+profile}
+function setLastSync(ms){try{localStorage.setItem(syncKey(),String(ms||Date.now()))}catch(e){}}
 function loadRemote(){
   if(!db)return;
   whenReady().then(function(){
-    if(localStorage.getItem(progKey())||localStorage.getItem(payKey())){pushProgram();pushPayments();pushSettings();return}
     return db.collection('ders-takip').get().then(function(snap){
-      var prog=null,pay=null,set=null,changed=false;
+      var prog=null,pay=null,set=null,remoteT=0,changed=false;
       snap.forEach(function(d){
-        if(d.id==='program_'+profile)prog=d.data().data;
-        if(d.id==='payments_'+profile)pay=d.data().data;
-        if(d.id==='settings_'+profile)set=d.data().data;
+        if(d.id==='program_'+profile)prog=d.data();
+        if(d.id==='payments_'+profile)pay=d.data();
+        if(d.id==='settings_'+profile)set=d.data();
       });
-      if(prog){localStorage.setItem(progKey(),JSON.stringify(prog));changed=true}
-      if(pay){localStorage.setItem(payKey(),JSON.stringify(pay));changed=true}
-      if(set){if(set.bireysel)localStorage.setItem(rateKeyB(),set.bireysel);if(set.grup)localStorage.setItem(rateKeyG(),set.grup);if(set.onlineBireysel)localStorage.setItem(rateKeyOB(),set.onlineBireysel);if(set.onlineGrup)localStorage.setItem(rateKeyOG(),set.onlineGrup)}
+      var last=(parseInt(localStorage.getItem(syncKey())||'0')||0);
+      if(prog&&prog.data&&tsMs(prog.t)>last){localStorage.setItem(progKey(),JSON.stringify(prog.data));remoteT=Math.max(remoteT,tsMs(prog.t));changed=true}
+      if(pay&&pay.data&&tsMs(pay.t)>last){localStorage.setItem(payKey(),JSON.stringify(pay.data));remoteT=Math.max(remoteT,tsMs(pay.t));changed=true}
+      if(set&&set.data&&tsMs(set.t)>last){
+        var sd=set.data;
+        if(sd.bireysel)localStorage.setItem(rateKeyB(),sd.bireysel);
+        if(sd.grup)localStorage.setItem(rateKeyG(),sd.grup);
+        if(sd.onlineBireysel)localStorage.setItem(rateKeyOB(),sd.onlineBireysel);
+        if(sd.onlineGrup)localStorage.setItem(rateKeyOG(),sd.onlineGrup);
+        remoteT=Math.max(remoteT,tsMs(set.t));changed=true;
+      }
+      if(remoteT)setLastSync(remoteT);
+      pushProgram();pushPayments();pushSettings();
       if(changed){migrateStale();checkWeekShift();location.reload();}
     });
   }).catch(function(){});
+}
+function forcePull(){
+  if(!db){alert('Sunucu bağlantısı yok. Yedek al/geri yükle kullan.');return}
+  whenReady().then(function(){
+    var done=0,total=3;
+    function step(){if(++done===total){migrateStale();checkWeekShift();location.reload()}}
+    db.collection('ders-takip').doc('program_'+profile).get().then(function(doc){
+      var d=doc.exists?doc.data():null;
+      if(d&&d.data){localStorage.setItem(progKey(),JSON.stringify(d.data));setLastSync(tsMs(d.t)||Date.now())}
+      step();
+    }).catch(function(){step()});
+    db.collection('ders-takip').doc('payments_'+profile).get().then(function(doc){
+      var d=doc.exists?doc.data():null;
+      if(d&&d.data){localStorage.setItem(payKey(),JSON.stringify(d.data));setLastSync(tsMs(d.t)||Date.now())}
+      step();
+    }).catch(function(){step()});
+    db.collection('ders-takip').doc('settings_'+profile).get().then(function(doc){
+      var d=doc.exists?doc.data():null;
+      if(d&&d.data){
+        if(d.data.bireysel)localStorage.setItem(rateKeyB(),d.data.bireysel);
+        if(d.data.grup)localStorage.setItem(rateKeyG(),d.data.grup);
+        if(d.data.onlineBireysel)localStorage.setItem(rateKeyOB(),d.data.onlineBireysel);
+        if(d.data.onlineGrup)localStorage.setItem(rateKeyOG(),d.data.onlineGrup);
+        setLastSync(tsMs(d.t)||Date.now());
+      }
+      step();
+    }).catch(function(){step()});
+  }).catch(function(){alert('Sunucudan veri alınamadı.');});
 }
 
 function calcHours(t){
@@ -775,7 +824,7 @@ checkWeekShift();
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=33',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=34',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
