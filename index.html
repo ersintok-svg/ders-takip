@@ -117,12 +117,18 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 </div>
 
 <div id="odemeler" class="panel">
-  <div class="toolbar">
+  <div class="toolbar" id="payments-list-toolbar">
     <button class="btn btn-primary btn-sm" onclick="printSelected()">&#x1F5A8; Seçili Öğrencileri PDF Gönder</button>
     <button class="btn btn-outline btn-sm" onclick="document.querySelectorAll('.student-select').forEach(function(c){c.checked=true});renderPayments()">Tümünü Seç</button>
     <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;color:var(--muted)">Ay: <select id="month-filter" onchange="paymentMonth=this.value;renderPayments()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.85rem;outline:none;background:transparent;color:var(--text)"></select></label>
     <button class="btn btn-outline btn-sm" onclick="paymentMonth='';renderMonthOptions();renderPayments()">&#x1F4C6; Tümü</button>
     <button class="btn btn-outline btn-sm" onclick="renderPayments()">&#x21BB; Yenile</button>
+  </div>
+  <div class="toolbar" id="payments-detail-toolbar" style="display:none">
+    <button class="btn btn-outline btn-sm" onclick="backToList()">&larr; Listeye Dön</button>
+    <span id="detail-name" style="font-weight:700;min-width:120px"></span>
+    <button class="btn btn-primary btn-sm" onclick="printPayments([currentStudent])">&#x1F5A8; PDF</button>
+    <button class="btn btn-outline btn-sm" onclick="payAll(currentStudent)">Tümünü Ödendi Yap</button>
   </div>
   <div id="payments-content"></div>
 </div>
@@ -132,7 +138,7 @@ h1 small{font-size:.85rem;font-weight:400;color:var(--muted)}
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
-var APP_VERSION='2026-08-06-4';
+var APP_VERSION='2026-08-06-5';
 try{if(localStorage.getItem('appver')&&localStorage.getItem('appver')!==APP_VERSION){localStorage.setItem('appver',APP_VERSION);location.reload()}localStorage.setItem('appver',APP_VERSION)}catch(e){}
 const DAYS = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -390,38 +396,65 @@ function renderMonthOptions(){
   if(paymentMonth&&!months[paymentMonth])paymentMonth='';
   sel.value=paymentMonth;
 }
+var currentStudent=null;
+function showStudent(name){currentStudent=name;renderPayments()}
+function backToList(){currentStudent=null;renderPayments()}
 function renderPayments(){
   renderMonthOptions();
+  var listTool=document.getElementById('payments-list-toolbar'),detTool=document.getElementById('payments-detail-toolbar');
+  if(currentStudent){
+    listTool.style.display='none';detTool.style.display='flex';
+    document.getElementById('detail-name').textContent=currentStudent;
+    renderStudentDetail(currentStudent);
+  }else{
+    listTool.style.display='flex';detTool.style.display='none';
+    renderStudentList();
+  }
+}
+function renderStudentList(){
   var p=getPayments(),keys=Object.keys(p),el=document.getElementById('payments-content');
-  if(!keys.length){el.innerHTML='<div class="empty-state"><p>Henüz işlenmiş ders yok.</p><p style="font-size:.85rem">Ders Programı\'nda checkbox işaretleyince buraya eklenir.</p></div>';return}
   if(paymentMonth) keys=keys.filter(function(k){return p[k].date&&p[k].date.slice(0,7)===paymentMonth});
   if(!keys.length){el.innerHTML='<div class="empty-state"><p>'+(paymentMonth?'Bu aya ait ders bulunamadı.':'Henüz işlenmiş ders yok.')+'</p><p style="font-size:.85rem">Ders Programı\'nda checkbox işaretleyince buraya eklenir.</p></div>';return}
   var groups={};
   keys.forEach(function(k){
-    var e=p[k];if(!groups[e.name])groups[e.name]={lessons:[],total:0,paid:0};
-    groups[e.name].lessons.push({key:k,dayKey:e.dayKey,time:e.time,amount:e.amount,paid:e.paid,date:e.date});
+    var e=p[k];if(!groups[e.name])groups[e.name]={total:0,paid:0};
     groups[e.name].total+=e.amount;
     if(e.paid)groups[e.name].paid+=e.amount;
   });
   var names=Object.keys(groups).sort(),grandUnpaid=0;
+  names.forEach(function(n){grandUnpaid+=groups[n].total-groups[n].paid});
   var html='';
-  names.forEach(function(n){
-    var g=groups[n],bal=g.total-g.paid;
-    grandUnpaid+=bal;
-  });
   if(grandUnpaid>0)html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><strong style="font-size:1rem">&#128176; Tahsil edilecek toplam</strong><div style="font-size:.8rem;color:var(--muted)">(ödenmemiş tüm dersler)</div></div><div style="font-size:1.4rem;font-weight:700;color:#dc2626">'+grandUnpaid.toFixed(0)+' TL</div></div>';
   names.forEach(function(n){
     var g=groups[n],bal=g.total-g.paid;
-    html+='<div class="student-card"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1"><input class="student-select" type="checkbox" data-name="'+esc(n)+'" style="width:18px;height:18px;accent-color:var(--primary)"> '+esc(n)+'</label>'+(bal>0?'<button class="btn btn-outline btn-sm" onclick="payAll(\''+esc(n)+'\')" style="flex-shrink:0">Tümünü Ödendi Yap</button>':'<span style="color:#059669;font-weight:700;font-size:.85rem;flex-shrink:0">&#10003; Tümü ödendi</span>')+'</h3><div class="summary">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; <span style="color:var(--ok,green)">Ödenen: '+g.paid.toFixed(0)+' TL</span>'+(bal>0?' &nbsp;·&nbsp; <span style="color:#dc2626">Kalan: '+bal.toFixed(0)+' TL</span>':'')+'</div>';
-    html+='<table><thead><tr><th>Ödendi</th><th>Tür</th><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th><th></th></tr></thead><tbody>';
-    g.lessons.forEach(function(l){
-      var fd=formatDate(l.date),dd='';
-      if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
-      html+='<tr><td><input type="checkbox" onchange="togglePaid(\''+esc(l.key)+'\',this)"'+(l.paid?' checked':'')+' style="width:18px;height:18px;accent-color:var(--primary)"></td><td><span style="font-size:.75rem;font-weight:600;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 5px">'+esc(l.type?typeLabel(l.type):'-')+'</span></td><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar"><input type="number" value="'+l.amount.toFixed(0)+'" min="0" onchange="updateAmount(\''+esc(l.key)+'\',this)" style="width:72px;text-align:right;font-size:.85rem;font-weight:600;border:1px solid transparent;border-radius:6px;padding:2px 4px;outline:none;background:transparent;color:var(--text)" onfocus="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"><span style="font-size:.8rem">TL</span></td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
-    });
-    html+='<tr class="toplam"><td colspan="6"><strong>Kalan</strong></td><td class="tutar"><strong>'+bal.toFixed(0)+' TL</strong></td></tr>';
-    html+='</tbody></table></div>';
+    html+='<div class="student-card" style="cursor:pointer" onclick="showStudent(\''+esc(n)+'\')"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1" onclick="event.stopPropagation()"><input class="student-select" type="checkbox" data-name="'+esc(n)+'" style="width:18px;height:18px;accent-color:var(--primary)"> '+esc(n)+'</label><span style="color:#94a3b8;font-size:1.2rem">&#8250;</span></h3><div class="summary">Toplam: '+g.total.toFixed(0)+' TL &nbsp;·&nbsp; <span style="color:var(--ok,green)">Ödenen: '+g.paid.toFixed(0)+' TL</span>'+(bal>0?' &nbsp;·&nbsp; <span style="color:#dc2626">Kalan: '+bal.toFixed(0)+' TL</span>':'')+(bal>0?'':' &nbsp; <span style="color:#059669;font-weight:700">&#10003; Tümü ödendi</span>')+'</div></div>';
   });
+  el.innerHTML=html;
+}
+function renderStudentDetail(n){
+  var p=getPayments(),keys=Object.keys(p).filter(function(k){return p[k].name===n}),el=document.getElementById('payments-content');
+  if(paymentMonth) keys=keys.filter(function(k){return p[k].date&&p[k].date.slice(0,7)===paymentMonth});
+  if(!keys.length){
+    el.innerHTML='<div class="empty-state"><p>'+(paymentMonth?n+' için bu ayda ders yok.':'Bu öğrenci için ders kaydı yok.')+'</p><button class="btn btn-outline btn-sm" onclick="paymentMonth=\'\';renderMonthOptions();renderPayments()">Tüm Ayları Göster</button></div>';
+    return;
+  }
+  var lessons=[],total=0,paid=0;
+  keys.forEach(function(k){
+    var e=p[k];lessons.push({key:k,dayKey:e.dayKey,time:e.time,amount:e.amount,paid:e.paid,date:e.date,type:e.type});
+    total+=e.amount;if(e.paid)paid+=e.amount;
+  });
+  var bal=total-paid,html='';
+  if(paymentMonth){var pp=paymentMonth.split('-');html+='<div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">Ay filtresi: <strong>'+new Date(+pp[0],+pp[1]-1,1).toLocaleDateString('tr-TR',{month:'long',year:'numeric'})+'</strong> <button class="btn btn-outline btn-sm" onclick="paymentMonth=\'\';renderMonthOptions();renderPayments()">Tüm Ayları Göster</button></div>';}
+  if(bal>0)html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><strong style="font-size:1rem">&#128176; '+esc(n)+' için tahsil edilecek</strong><div style="font-size:.8rem;color:var(--muted)">(ödenmemiş dersler)</div></div><div style="font-size:1.4rem;font-weight:700;color:#dc2626">'+bal.toFixed(0)+' TL</div></div>';
+  html+='<div class="student-card"><div class="summary">Toplam: '+total.toFixed(0)+' TL &nbsp;·&nbsp; <span style="color:var(--ok,green)">Ödenen: '+paid.toFixed(0)+' TL</span>'+(bal>0?' &nbsp;·&nbsp; <span style="color:#dc2626">Kalan: '+bal.toFixed(0)+' TL</span>':'')+'</div>';
+  html+='<table><thead><tr><th>Ödendi</th><th>Tür</th><th>Tarih</th><th>Gün</th><th>Saat</th><th>Tutar</th><th></th></tr></thead><tbody>';
+  lessons.forEach(function(l){
+    var fd=formatDate(l.date),dd='';
+    if(l.date){var dp=l.date.split('-');dd=['Paz','Pts','Sal','Çar','Per','Cum','Cmt'][new Date(+dp[0],+dp[1]-1,+dp[2]).getDay()];}
+    html+='<tr><td><input type="checkbox" onchange="togglePaid(\''+esc(l.key)+'\',this)"'+(l.paid?' checked':'')+' style="width:18px;height:18px;accent-color:var(--primary)"></td><td><span style="font-size:.75rem;font-weight:600;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 5px">'+esc(l.type?typeLabel(l.type):'-')+'</span></td><td>'+esc(fd||'')+'</td><td>'+esc(dd)+'</td><td>'+esc(l.time||'-')+'</td><td class="tutar"><input type="number" value="'+l.amount.toFixed(0)+'" min="0" onchange="updateAmount(\''+esc(l.key)+'\',this)" style="width:72px;text-align:right;font-size:.85rem;font-weight:600;border:1px solid transparent;border-radius:6px;padding:2px 4px;outline:none;background:transparent;color:var(--text)" onfocus="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"><span style="font-size:.8rem">TL</span></td><td><button onclick="deletePayment(\''+esc(l.key)+'\')" style="width:18px;height:18px;border:none;background:transparent;color:#ccc;cursor:pointer;font-size:.9rem;padding:0;line-height:1">x</button></td></tr>';
+  });
+  html+='<tr class="toplam"><td colspan="6"><strong>Kalan</strong></td><td class="tutar"><strong>'+bal.toFixed(0)+' TL</strong></td></tr>';
+  html+='</tbody></table></div>';
   el.innerHTML=html;
 }
 
@@ -601,7 +634,7 @@ document.getElementById('default-rate-online-grup').value=getDefaultRate('online
 renderSchedule();
 checkBackup();
 loadRemote();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=22',{updateViaCache:'none'}).then(function(r){r.update()});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=23',{updateViaCache:'none'}).then(function(r){r.update()});
 </script>
 </body>
 </html>
